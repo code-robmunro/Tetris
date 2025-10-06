@@ -1,11 +1,13 @@
 import pygame
 import sys
+from ui import UI
 from board import Board
 from pieces import Piece
 
 class Game:
     def __init__(self, screen):
         self.screen = screen
+        self.ui = UI()
         self.board = Board()
         self.current_piece = Piece.random()
         self.next_piece = Piece.random()
@@ -35,6 +37,7 @@ class Game:
         pass
 
     def draw(self):
+        self.ui.draw(self.screen)
         self.board.draw(self.screen)
 
         # Update the display
