@@ -7,7 +7,8 @@ class UI:
         pass
 
     def draw(self, screen):
-        cat = assets.load_image("assets/graphics/cat.png")
+        cat = assets.load_image("assets/cat.png")
+
         # sprite = pygame.image.load("assets/graphics/cat.png").convert_alpha()
         # cat = pygame.transform.scale(cat, (500, 500))
         screen.blit(cat, (0, 0))

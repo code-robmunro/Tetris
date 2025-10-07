@@ -1,5 +1,6 @@
 import pygame
 import sys
+import asyncio
 from ui import UI
 from board import Board
 from pieces import Piece
@@ -8,6 +9,7 @@ class Game:
     def __init__(self, screen):
         self.screen = screen
         self.ui = UI()
+        self.clock = pygame.time.Clock()
         self.board = Board()
         self.current_piece = Piece.random()
         self.next_piece = Piece.random()
@@ -15,11 +17,15 @@ class Game:
         self.game_over = False
         self.running = True
 
-    def run(self):
+    async def run(self):
         while self.running:
             self.handle_input()
             self.update()
             self.draw()
+
+            self.clock.tick(60)
+            # yield control back to pygbag/browser
+            await asyncio.sleep(0)
 
         # Quit pygame
         pygame.quit()
