@@ -1,11 +1,5 @@
 import pygame
 
-def load_sprite(path, scale=None):
-    sprite = pygame.image.load(path).convert_alpha()
-    if scale is not None:
-        sprite = pygame.transform.scale(sprite, (sprite.get_width * scale, sprite.get_height * scale))
-    return sprite
-
 def get_sprite(sheet, x, y, width, height):
     """Return a single sprite from a sprite sheet."""
     sprite = pygame.Surface((width, height), pygame.SRCALPHA)

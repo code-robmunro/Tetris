@@ -14,5 +14,6 @@ def load_image(path, scale=None):
 
 def preload():    
     # preload commonly used graphics
-    cat_sprite = load_image("assets/cat.png", 0.5)
-    tetris_bit = load_image(globals.TETRIS_BIT_SHEET)
+    tetris_bit = load_image(globals.TETRIS_BIT_SHEET, 2)
+    play_area_vertical_border = load_image(globals.PLAY_AREA_VERTICAL_BORDER)
+    play_area_horizontal_border = load_image(globals.PLAY_AREA_HORIZONTAL_BORDER)

@@ -8,8 +8,8 @@ from globals import SCREEN_WIDTH, SCREEN_HEIGHT
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Tetris")
-game = Game(screen)
 assets.preload()
+game = Game(screen)
 
 async def main():
     await game.run()
