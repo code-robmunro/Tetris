@@ -7,7 +7,7 @@ import sprite_utils
 class UI:
     def __init__(self):
         self.background = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
-        tetris_bit = assets.load_image(globals.TETRIS_BIT_SHEET)
+        tetris_bit = assets.load_image(globals.TETRIS_BIT_16_SHEET)
         self.background_tile = sprite_utils.get_sprite(tetris_bit, 10 * 32, 0, 32, 32)
         for x in range(-16, globals.SCREEN_WIDTH, self.background_tile.get_width()):
             for y in range(-16, globals.SCREEN_HEIGHT, self.background_tile.get_height()):
