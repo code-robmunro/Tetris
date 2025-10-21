@@ -14,18 +14,22 @@ class Piece:
             self.x = (globals.BOARD_WIDTH / 2) - 1
         self.y = -2
     
-    def rotate_clockwise(matrix):
-        n = len(matrix)
+    def rotate_cw(piece):
+        n = len(piece.shape)
         rotated = [[0]*n for _ in range(n)]
         for y in range(n):
             for x in range(n):
-                rotated[x][n-1-y] = matrix[y][x]
-        return rotated
+                rotated[x][n-1-y] = piece.shape[y][x]
+
+        piece.shape = rotated
+        return piece
     
-    def rotate_counterclockwise(matrix):
-        n = len(matrix)
+    def rotate_ccw(piece):
+        n = len(piece.shape)
         rotated = [[0]*n for _ in range(n)]
         for y in range(n):
             for x in range(n):
-                rotated[n-1-x][y] = matrix[y][x]
-        return rotated
+                rotated[n-1-x][y] = piece.shape[y][x]
+        
+        piece.shape = rotated
+        return piece

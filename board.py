@@ -43,7 +43,7 @@ class Board:
 
         for x, row in enumerate(self.current_piece.shape):
             for y, cell_value in enumerate(self.current_piece.shape):
-                self.draw_bit2(self.current_piece.shape[x][y], x + self.current_piece.x, y + self.current_piece.y)
+                self.draw_bit(self.current_piece.shape[x][y], x + self.current_piece.x, y + self.current_piece.y)
 
 
         screen.blit(self.play_area, (280, 64))
@@ -60,18 +60,12 @@ class Board:
         return piece_bits
     
     def draw_bit(self, cell_value, grid_x, grid_y):
-        self.play_area.blit(
-            self.piece_bits[cell_value - 1],
-            (
-                grid_x * globals.TETRIS_BIT_24_WIDTH,
-                grid_y * globals.TETRIS_BIT_24_HEIGHT,
-            )
-        )
-
-    def draw_bit2(self, cell_value, grid_x, grid_y):
-        if cell_value == 0:
+        # We are off by 1 on cell values, so we subtract 1 later.
+        # This means that 0 becomes 6 and we end up rendering a block instead of empty space.
+        # This check prevents that but we should find a real solution.
+        if cell_value == 0: 
             return
-        
+
         self.play_area.blit(
             self.piece_bits[cell_value - 1],
             (
@@ -84,8 +78,20 @@ class Board:
         self.current_piece = piece
 
     def can_drop(self):
-        if self.current_piece.y < 19:
+        if self.current_piece is not None and self.current_piece.y < 19:
             print("Current Y: " + str(self.current_piece.y))
             print("Current X: " + str(self.current_piece.x))
             print("Shape: \n" + str(self.current_piece.shape))
             self.current_piece.y += 1
+
+    def can_move_left(self):
+        self.current_piece.x -= 1
+
+    def can_move_right(self):
+        self.current_piece.x += 1
+
+    def can_rotate_cw(self):
+        self.current_piece = self.current_piece.rotate_cw()
+    
+    def can_rotate_ccw(self):
+        self.current_piece = self.current_piece.rotate_ccw()

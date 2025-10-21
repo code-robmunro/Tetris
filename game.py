@@ -15,8 +15,13 @@ class Game:
         self.ui = UI()
         self.board = Board()
 
-        self.game_over = False
+        self.state = "PLAYING"
         self.score = 0
+
+        self.last_lock_info = {
+            "lines_cleared": 0,
+            "board_full": False,
+        }
 
         # Timers
         self.gravity_timer = .25 # Falling speed - Level 1
@@ -50,19 +55,47 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+                elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
+                    self.move_left()
+                elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
+                    self.move_right()
+                elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
+                    self.soft_drop()
+                elif event.key == pygame.K_SPACE:
+                    self.hard_drop()
+                elif event.key == pygame.K_w or event.key == pygame.K_e or event.key == pygame.K_UP:
+                    self.rotate_cw()
+                elif event.key == pygame.K_q or event.key == pygame.K_z:
+                    self.rotate_ccw()
+                elif event.key == pygame.K_LSHIFT:
+                    self.hold_piece()
 
     def update(self):
         self.delta_time = self.clock.get_time() / 1000
+        
+        self.gravity_elapsed += self.delta_time
+        if self.gravity_elapsed >= self.gravity_timer:
+            self.drop_piece()
+            self.gravity_elapsed = 0
+
+        if self.board.current_piece is None:
+            result = self.handle_piece_lock()
         
         self.spawn_timer += self.delta_time
         if self.spawn_timer >= 4.5:
             self.spawn_piece()
             self.spawn_timer = 0
 
-        self.gravity_elapsed += self.delta_time
-        if self.gravity_elapsed >= self.gravity_timer:
-            self.drop_piece()
-            self.gravity_elapsed = 0
+    def handle_piece_lock(self):
+        if self.last_lock_info["lines_cleared"]:
+            self.score += self.calculate_line_score(self.last_lock_info["lines_cleared"])
+
+        # Check game over
+        if self.last_lock_info["board_full"]:
+            self.state = "GAME_OVER"
+        else:
+        # Spawn next piece
+            self.spawn_piece()
 
     def spawn_piece(self):
         piece = Piece()
@@ -78,3 +111,24 @@ class Game:
 
         # Update the display
         pygame.display.flip()
+
+    def move_left(self):
+        self.board.can_move_left()
+
+    def move_right(self):
+        self.board.can_move_right()
+
+    def soft_drop(self):
+        pass
+
+    def hard_drop(self):
+        pass
+
+    def rotate_cw(self):
+        self.board.can_rotate_cw()
+
+    def rotate_ccw(self):
+        self.board.can_rotate_ccw()
+
+    def hold_piece(self):
+        pass
