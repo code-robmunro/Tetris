@@ -7,6 +7,7 @@ import sprite_utils
 
 class Board:
     def __init__(self):
+        # grid[x][y] - x-major storage
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
         self.grid[0][19] = int(PieceType.L)
         self.grid[1][19] = int(PieceType.L)
@@ -41,10 +42,8 @@ class Board:
                 elif cell_value == 7:
                     self.draw_bit(cell_value, x, y)
 
-        for x, row in enumerate(self.current_piece.shape):
-            for y, cell_value in enumerate(self.current_piece.shape):
-                self.draw_bit(self.current_piece.shape[x][y], x + self.current_piece.x, y + self.current_piece.y)
-
+        for x, y, value in self.current_piece.iter_cells():
+            self.draw_bit(value, x + self.current_piece.x, y + self.current_piece.y)
 
         screen.blit(self.play_area, (280, 64))
 
@@ -85,13 +84,62 @@ class Board:
             self.current_piece.y += 1
 
     def move_left(self):
-        self.current_piece.x -= 1
+        if self.can_move_left():
+            self.current_piece.x -= 1
 
+    def can_move_left(self):
+        for x, y, value in self.current_piece.iter_cells():
+            if value is not 0 and self.current_piece.x + x <= 0:
+                return False
+        return True
+                
     def move_right(self):
-        self.current_piece.x += 1
+        if self.can_move_right():
+            self.current_piece.x += 1
+
+    def can_move_right(self):
+        for x, y, value in self.current_piece.iter_cells():
+            if value is not 0 and self.current_piece.x + x >= 9:
+                return False
+        return True
+    
+    def can_place(self):
+        for x, y, value in self.current_piece.iter_cells():
+            if value == 0:
+                continue
+            board_x = self.current_piece.x + x
+            board_y = self.current_piece.y + y
+
+            # check bounds
+            if board_x < 0 or board_x >= globals.BOARD_WIDTH or board_y >= globals.BOARD_HEIGHT:
+                return False
+
+            # check existing blocks
+            if self.grid[board_x][board_y] != 0:
+                return False
+
+        return True
 
     def rotate_cw(self):
         self.current_piece.rotate_cw()
-    
+        if not self.can_place():
+            # simple wall kick
+            for offset in (-1, 1):
+                self.current_piece.x += offset
+                if self.can_place():
+                    return
+                self.current_piece.x -= offset
+            # revert if all failed
+            self.current_piece.rotate_ccw()
+            
     def rotate_ccw(self):
         self.current_piece.rotate_ccw()
+        if not self.can_place():
+            # simple wall kick
+            for offset in (-1, 1):
+                self.current_piece.x += offset
+                if self.can_place():
+                    return
+                self.current_piece.x -= offset
+            # revert if all failed
+            self.current_piece.rotate_cw()

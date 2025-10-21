@@ -25,7 +25,7 @@ class Game:
         }
 
         # Timers
-        self.seconds_per_row = 1
+        self.seconds_per_row = 0.25 # 1
         self.gravity_elapsed = 1 # Right at start, we drop 1 level then start accumulating at 0 
         self.gravity_timer_growth_factor = 1.1
         self.lock_timer = 0.8 # Grounded slide / wall kick - Level 1
