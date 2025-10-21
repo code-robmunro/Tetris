@@ -17,6 +17,7 @@ class Game:
 
         self.state = "PLAYING"
         self.score = 0
+        self.spawn_piece()
 
         self.last_lock_info = {
             "lines_cleared": 0,
@@ -24,12 +25,15 @@ class Game:
         }
 
         # Timers
-        self.gravity_timer = .25 # Falling speed - Level 1
+        self.seconds_per_row = 1
         self.gravity_elapsed = 1 # Right at start, we drop 1 level then start accumulating at 0 
         self.gravity_timer_growth_factor = 1.1
         self.lock_timer = 0.8 # Grounded slide / wall kick - Level 1
         self.entry_delay = 0.5 # Before next piece enters
         self.delayed_auto_shift = 0.17 # Before holding L/R results in repeated movement 
+        self.soft_drop_timer = 0
+        self.soft_drop_multiplier = 20
+        self.soft_drop_active = False
 
         self.spawn_timer = 4.5    
         
@@ -60,7 +64,7 @@ class Game:
                 elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
                     self.move_right()
                 elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
-                    self.soft_drop()
+                    self.soft_drop_active = True
                 elif event.key == pygame.K_SPACE:
                     self.hard_drop()
                 elif event.key == pygame.K_w or event.key == pygame.K_e or event.key == pygame.K_UP:
@@ -70,13 +74,21 @@ class Game:
                 elif event.key == pygame.K_LSHIFT:
                     self.hold_piece()
 
+            elif event.type == pygame.KEYUP:
+                if event.key in (pygame.K_s, pygame.K_DOWN):
+                    self.soft_drop_active = False  # stop soft drop
+
     def update(self):
-        self.delta_time = self.clock.get_time() / 1000
+        self.delta_time = self.clock.tick(60) / 1000
         
-        self.gravity_elapsed += self.delta_time
-        if self.gravity_elapsed >= self.gravity_timer:
-            self.drop_piece()
-            self.gravity_elapsed = 0
+        if self.soft_drop_active:
+            self.gravity_elapsed += self.delta_time * self.soft_drop_multiplier
+        else:
+            self.gravity_elapsed += self.delta_time
+
+        while self.gravity_elapsed >= self.seconds_per_row:
+            self.move_down()
+            self.gravity_elapsed -= self.seconds_per_row
 
         if self.board.current_piece is None:
             result = self.handle_piece_lock()
@@ -100,10 +112,13 @@ class Game:
     def spawn_piece(self):
         piece = Piece()
 
-        self.board.can_place_piece(piece)
+        self.board.place_piece(piece)
 
-    def drop_piece(self):
-        self.board.can_drop()        
+    def move_down(self):
+        self.board.move_down()
+        
+        if self.soft_drop_active == True:
+            self.gravity_elapsed = 0        
 
     def draw(self):
         self.ui.draw(self.screen)
@@ -113,22 +128,19 @@ class Game:
         pygame.display.flip()
 
     def move_left(self):
-        self.board.can_move_left()
+        self.board.move_left()
 
     def move_right(self):
-        self.board.can_move_right()
-
-    def soft_drop(self):
-        pass
+        self.board.move_right()
 
     def hard_drop(self):
         pass
 
     def rotate_cw(self):
-        self.board.can_rotate_cw()
+        self.board.rotate_cw()
 
     def rotate_ccw(self):
-        self.board.can_rotate_ccw()
+        self.board.rotate_ccw()
 
     def hold_piece(self):
         pass

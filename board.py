@@ -74,24 +74,24 @@ class Board:
             )
         )
 
-    def can_place_piece(self, piece: Piece):
+    def place_piece(self, piece: Piece):
         self.current_piece = piece
 
-    def can_drop(self):
+    def move_down(self):
         if self.current_piece is not None and self.current_piece.y < 19:
             print("Current Y: " + str(self.current_piece.y))
             print("Current X: " + str(self.current_piece.x))
             print("Shape: \n" + str(self.current_piece.shape))
             self.current_piece.y += 1
 
-    def can_move_left(self):
+    def move_left(self):
         self.current_piece.x -= 1
 
-    def can_move_right(self):
+    def move_right(self):
         self.current_piece.x += 1
 
-    def can_rotate_cw(self):
-        self.current_piece = self.current_piece.rotate_cw()
+    def rotate_cw(self):
+        self.current_piece.rotate_cw()
     
-    def can_rotate_ccw(self):
-        self.current_piece = self.current_piece.rotate_ccw()
+    def rotate_ccw(self):
+        self.current_piece.rotate_ccw()
