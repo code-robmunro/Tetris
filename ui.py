@@ -6,27 +6,33 @@ import sprite_utils
 
 class UI:
     def __init__(self):
-        self.background = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
-        tetris_bit = assets.load_image(globals.TETRIS_BIT_16_SHEET)
-        self.background_tile = sprite_utils.get_sprite(tetris_bit, 10 * 32, 0, 32, 32)
-        for x in range(-16, globals.SCREEN_WIDTH, self.background_tile.get_width()):
-            for y in range(-16, globals.SCREEN_HEIGHT, self.background_tile.get_height()):
-                self.background.blit(self.background_tile, (x, y))
+        self.layout = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))        
+        background = assets.load_image(globals.BACKGROUND)
+        self.layout.blit(background, (0, 0))
 
-        horizontal_pipe = assets.load_image(globals.PLAY_AREA_HORIZONTAL_BORDER)
-        vertical_pipe = assets.load_image(globals.PLAY_AREA_VERTICAL_BORDER)
+        play_area_border = assets.load_image(globals.PLAY_AREA_BORDER)
+        self.layout.blit(play_area_border, (274, 60))
+        self.layout.fill((0, 0, 0), (280, 66, 240, 480))
 
-        self.play_area_border = pygame.Surface((256, 512), pygame.SRCALPHA)
+        level_txt_border = assets.load_image(globals.LEVEL_TXT_BORDER)
+        self.layout.blit(level_txt_border, (285, 15))
+        self.layout.fill((0, 0, 0), (289, 19, 221, 36))
 
-        for x in range(0, 256, horizontal_pipe.get_width()):
-            self.play_area_border.blit(horizontal_pipe, (x, 0))
-            self.play_area_border.blit(horizontal_pipe, (x, 512 - 16))
+        next_piece_border = assets.load_image(globals.NEXT_PIECE_BORDER)
+        self.layout.blit(next_piece_border, (545, 216))
+        self.layout.fill((0, 0, 0), (551, 222, 96, 96))
 
-        for y in range(16, 512 - 16, vertical_pipe.get_height()):
-            self.play_area_border.blit(vertical_pipe, (0, y))
-            self.play_area_border.blit(vertical_pipe, (256 - 8, y))
+        next_txt_border = assets.load_image(globals.NEXT_TXT_BORDER)
+        self.layout.blit(next_txt_border, (558, 186))
+        self.layout.fill((0, 0, 0), (562, 190, 73, 20))
+
+        point_value_border = assets.load_image(globals.POINT_VALUE_BORDER)
+        self.layout.blit(point_value_border, (44, 120))
+        self.layout.fill((0, 0, 0), (48, 124, 205, 422))
+
+        score_border = assets.load_image(globals.SCORE_BORDER)
+        self.layout.blit(score_border, (543, 15))
+        self.layout.fill((0, 0, 0), (547, 19, 187, 116))
 
     def draw(self, screen):
-        screen.blit(self.background, (0, 0))
-        screen.fill((0, 0, 0), ((32 * 9) - 16, (32 * 2) - 16, 256, 512))
-        screen.blit(self.play_area_border, ((32 * 9) - 16, (32 * 2) - 16))
+        screen.blit(self.layout, (0, 0))
