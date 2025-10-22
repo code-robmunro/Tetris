@@ -77,69 +77,85 @@ class Board:
         self.current_piece = piece
 
     def move_down(self):
-        if self.current_piece is not None and self.current_piece.y < 19:
-            print("Current Y: " + str(self.current_piece.y))
-            print("Current X: " + str(self.current_piece.x))
-            print("Shape: \n" + str(self.current_piece.shape))
+        if self.can_move(0, 1):
             self.current_piece.y += 1
-
+        else:
+            self.lock_piece()
+    
     def move_left(self):
-        if self.can_move_left():
+        if self.can_move(-1, 0):
             self.current_piece.x -= 1
-
-    def can_move_left(self):
-        for x, y, value in self.current_piece.iter_cells():
-            if value is not 0 and self.current_piece.x + x <= 0:
-                return False
-        return True
                 
     def move_right(self):
-        if self.can_move_right():
+        if self.can_move(1, 0):
             self.current_piece.x += 1
-
-    def can_move_right(self):
-        for x, y, value in self.current_piece.iter_cells():
-            if value is not 0 and self.current_piece.x + x >= 9:
-                return False
-        return True
     
-    def can_place(self):
-        for x, y, value in self.current_piece.iter_cells():
+    def is_position_valid(self, dx=0, dy=0):
+        """Return True if the piece at (x+dx, y+dy) is within board and not colliding."""
+        for cell_x, cell_y, value in self.current_piece.iter_cells():
             if value == 0:
                 continue
-            board_x = self.current_piece.x + x
-            board_y = self.current_piece.y + y
 
-            # check bounds
-            if board_x < 0 or board_x >= globals.BOARD_WIDTH or board_y >= globals.BOARD_HEIGHT:
+            board_x = self.current_piece.x + cell_x + dx
+            board_y = self.current_piece.y + cell_y + dy
+
+            # horizontal bounds
+            if board_x < 0 or board_x >= globals.BOARD_WIDTH:
                 return False
 
-            # check existing blocks
+            # vertical bounds (bottom)
+            if board_y >= globals.BOARD_HEIGHT:
+                return False
+
+            # above the board: allowed
+            if board_y < 0:
+                continue
+
+            # overlap with grid
             if self.grid[board_x][board_y] != 0:
                 return False
 
         return True
 
+    def can_move(self, dx, dy):
+        return self.is_position_valid(dx, dy)
+
     def rotate_cw(self):
         self.current_piece.rotate_cw()
-        if not self.can_place():
-            # simple wall kick
+
+        # check if the new orientation is valid
+        if not self.is_position_valid():
+            # simple wall kick: try moving left or right by 1
             for offset in (-1, 1):
-                self.current_piece.x += offset
-                if self.can_place():
+                if self.is_position_valid(dx=offset):
+                    self.current_piece.x += offset
                     return
-                self.current_piece.x -= offset
-            # revert if all failed
+            # revert if all wall kicks failed
             self.current_piece.rotate_ccw()
-            
+
     def rotate_ccw(self):
         self.current_piece.rotate_ccw()
-        if not self.can_place():
-            # simple wall kick
+
+        if not self.is_position_valid():
             for offset in (-1, 1):
-                self.current_piece.x += offset
-                if self.can_place():
+                if self.is_position_valid(dx=offset):
+                    self.current_piece.x += offset
                     return
-                self.current_piece.x -= offset
-            # revert if all failed
             self.current_piece.rotate_cw()
+
+    def lock_piece(self):
+        for cell_x, cell_y, value in self.current_piece.iter_cells():
+            if value == 0:
+                continue
+
+            board_x = self.current_piece.x + cell_x
+            board_y = self.current_piece.y + cell_y
+
+            if board_y < 0:
+                # piece above the board — skip for now
+                continue
+
+            self.grid[board_x][board_y] = value
+
+        # spawn a new piece
+        self.current_piece = None

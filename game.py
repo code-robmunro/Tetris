@@ -25,7 +25,7 @@ class Game:
         }
 
         # Timers
-        self.seconds_per_row = 0.25 # 1
+        self.seconds_per_row = 0.2 # 1
         self.gravity_elapsed = 1 # Right at start, we drop 1 level then start accumulating at 0 
         self.gravity_timer_growth_factor = 1.1
         self.lock_timer = 0.8 # Grounded slide / wall kick - Level 1
@@ -91,12 +91,7 @@ class Game:
             self.gravity_elapsed -= self.seconds_per_row
 
         if self.board.current_piece is None:
-            result = self.handle_piece_lock()
-        
-        self.spawn_timer += self.delta_time
-        if self.spawn_timer >= 4.5:
             self.spawn_piece()
-            self.spawn_timer = 0
 
     def handle_piece_lock(self):
         if self.last_lock_info["lines_cleared"]:
