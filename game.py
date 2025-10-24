@@ -6,6 +6,11 @@ from board import Board
 from piece import Piece
 
 class Game:
+    GRAVITY_TIMER_GROWTH_FACTOR = 1.1
+    ENTRY_DELAY = 0.5 # Before next piece enters
+    DELAYED_AUTO_SHIFT = 0.17 # Before holding L/R results in repeated movement
+    SOFT_DROP_MULTIPLIER = 20
+
     def __init__(self, screen):
         self.clock = pygame.time.Clock()
         self.screen = screen
@@ -24,19 +29,11 @@ class Game:
             "board_full": False,
         }
 
-        # Timers
+        self.gravity_time = 0
         self.seconds_per_row = 0.2 # 1
-        self.gravity_elapsed = 1 # Right at start, we drop 1 level then start accumulating at 0 
-        self.gravity_timer_growth_factor = 1.1
-        self.lock_timer = 0.8 # Grounded slide / wall kick - Level 1
-        self.entry_delay = 0.5 # Before next piece enters
-        self.delayed_auto_shift = 0.17 # Before holding L/R results in repeated movement 
+        self.lock_delay = 0.5 # Grounded slide / wall kick - Level 1
         self.soft_drop_timer = 0
-        self.soft_drop_multiplier = 20
-        self.soft_drop_active = False
-
-        self.spawn_timer = 4.5    
-        
+        self.soft_drop_active = False  
 
     async def run(self):
         while self.running:
@@ -81,15 +78,20 @@ class Game:
     def update(self):
         self.delta_time = self.clock.tick(60) / 1000
         
+        # Update gravity
         if self.soft_drop_active:
-            self.gravity_elapsed += self.delta_time * self.soft_drop_multiplier
+            self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
         else:
-            self.gravity_elapsed += self.delta_time
+            self.gravity_time += self.delta_time
 
-        while self.gravity_elapsed >= self.seconds_per_row:
+        # Move piece down based on gravity
+        while self.gravity_time >= self.seconds_per_row:
             self.move_down()
-            self.gravity_elapsed -= self.seconds_per_row
+            self.gravity_time -= self.seconds_per_row
 
+        self.board.update(self.delta_time)
+
+        # Spawn a new piece if needed
         if self.board.current_piece is None:
             self.spawn_piece()
 
@@ -107,13 +109,15 @@ class Game:
     def spawn_piece(self):
         piece = Piece()
 
-        self.board.place_piece(piece)
+        if not self.board.place_piece(piece):
+            self.state = "GAME_OVER"
+            return
 
     def move_down(self):
         self.board.move_down()
         
         if self.soft_drop_active == True:
-            self.gravity_elapsed = 0        
+            self.gravity_time = 0        
 
     def draw(self):
         self.ui.draw(self.screen)
@@ -129,7 +133,8 @@ class Game:
         self.board.move_right()
 
     def hard_drop(self):
-        pass
+        self.board.hard_drop()
+        self.spawn_piece()        
 
     def rotate_cw(self):
         self.board.rotate_cw()
