@@ -27,7 +27,10 @@ POINT_VALUE_BORDER = "assets/graphics/point_value_border.png"
 SCORE_BOX = "assets/graphics/score_box.png"
 SCORE_BORDER = "assets/graphics/score_border.png"
 
-
-
 BOARD_WIDTH = 10
 BOARD_HEIGHT = 20
+
+TETRIS_SONG = "assets/sound/tetris.wav"
+MOVE_SOUND = "assets/sound/move.wav"
+ROTATE_SOUND = "assets/sound/rotate.wav"
+LINE_CLEAR_SOUND = "assets/sound/line_clear.ogg"

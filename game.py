@@ -2,6 +2,7 @@ import pygame
 import sys
 import asyncio
 from ui import UI
+from soundmanager import SoundManager
 from board import Board
 from piece import Piece
 
@@ -20,6 +21,8 @@ class Game:
         self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
 
         self.ui = UI()
+        self.sound = SoundManager()
+        self.sound.play_music()
         self.board = Board()
 
         self.state = "PLAYING"
@@ -36,15 +39,6 @@ class Game:
         self.lock_delay = 0.5 # Grounded slide / wall kick - Level 1
         self.soft_drop_timer = 0
         self.soft_drop_active = False 
-
-        # Initialize Pygame mixer
-        pygame.mixer.init()
-
-        # Load your music
-        pygame.mixer.music.load("assets/sound/tetris.wav")
-
-        pygame.mixer.music.set_volume(0.05)
-        pygame.mixer.music.play(loops=-1, fade_ms=1000)
 
     async def run(self):
         while self.running:
@@ -109,10 +103,12 @@ class Game:
 
         # Move piece down based on gravity
         while self.gravity_time >= self.seconds_per_row:
-            self.move_down()
+            self.move_down(from_input=self.soft_drop_active)  # gravity movement, no sound
             self.gravity_time -= self.seconds_per_row
 
-        self.board.update(self.delta_time)
+        lock_info = self.board.update(self.delta_time)
+        if lock_info["lines_cleared"] > 0:
+            self.handle_piece_lock(lock_info)
 
         # Spawn a new piece if needed
         if self.board.current_piece is None:
@@ -129,41 +125,50 @@ class Game:
             self.state = "GAME_OVER"
             return
 
-    def handle_piece_lock(self):
-        if self.last_lock_info["lines_cleared"]:
-            self.score += self.calculate_line_score(self.last_lock_info["lines_cleared"])
-
-        # Check game over
-        if self.last_lock_info["board_full"]:
+    def handle_piece_lock(self, lock_info):
+        if lock_info["lines_cleared"] > 0:
+            self.sound.play("line_clear")
+            self.score += self.calculate_line_score(lock_info["lines_cleared"])
+        
+        if lock_info["board_full"]:
             self.state = "GAME_OVER"
         else:
-        # Spawn next piece
             self.spawn_piece()
+
+    def calculate_line_score(self, lines_cleared):
+        return 0
 
     # -----------------------------
     # Input event handlers
     # -----------------------------
-    def move_down(self):
-        self.board.move_down()
+    def move_down(self, from_input=False):
+        moved = self.board.move_down()
         
+        if from_input and moved:
+            self.sound.play("move")
+
         if self.soft_drop_active == True:
             self.gravity_time = 0        
 
     def move_left(self):
-        self.board.move_left()
+        if self.board.move_left():
+            self.sound.play("move")
 
     def move_right(self):
-        self.board.move_right()
+        if self.board.move_right():
+            self.sound.play("move")
 
     def hard_drop(self):
-        self.board.hard_drop()
-        self.spawn_piece()        
+        lock_info = self.board.hard_drop()
+        self.handle_piece_lock(lock_info)  
 
     def rotate_cw(self):
-        self.board.rotate_cw()
+        if self.board.rotate_cw():
+            self.sound.play("rotate")
 
     def rotate_ccw(self):
-        self.board.rotate_ccw()
+        if self.board.rotate_ccw():
+            self.sound.play("rotate")
 
     def hold_piece(self):
         pass

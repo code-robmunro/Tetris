@@ -28,6 +28,10 @@ class Board:
     # Update / Draw
     # -----------------------------
     def update(self, delta_time):
+        lock_info = {
+            "lines_cleared": 0,
+            "board_full": False,
+        }
         if self.current_piece:
             self.current_piece.update(
                 board=self,
@@ -36,10 +40,12 @@ class Board:
             )
 
             if self.current_piece.state == PieceState.LOCKED:
-                self.lock_piece()
+                lock_info = self.lock_piece()
 
         self.moved_this_frame = False
         self.rotated_this_frame = False
+
+        return lock_info
 
     def draw(self, screen):
         self.play_area.fill((0, 0, 0))
@@ -129,13 +135,18 @@ class Board:
             if 0 <= bx < globals.BOARD_WIDTH and 0 <= by < globals.BOARD_HEIGHT:
                 self.grid[bx][by] = val
 
-        self.clear_lines()
         self.current_piece = None
+        return self.clear_lines()
 
     def clear_lines(self):
         complete_lines = self.detect_complete_lines()
         for row in complete_lines:
             self.remove_row(row)
+
+        return {
+            "lines_cleared": len(complete_lines),
+            "board_full": False,
+        }
 
     def detect_complete_lines(self):
         complete_lines = []
@@ -156,22 +167,31 @@ class Board:
         if self.can_move(-1, 0):
             self.current_piece.move(-1, 0)
             self.moved_this_frame = True
+            return True
+
+        return False
 
     def move_right(self):
         if self.can_move(1, 0):
             self.current_piece.move(1, 0)
             self.moved_this_frame = True
+            return True
+        
+        return False
 
     def move_down(self):
         if self.can_move(0, 1):
             self.current_piece.move(0, 1)
             self.moved_this_frame = True
+            return True
+        
+        return False
 
     def rotate_cw(self):
-        self._rotate(True)
+        return self._rotate(True)
 
     def rotate_ccw(self):
-        self._rotate(False)
+        return self._rotate(False)
 
     def _rotate(self, clockwise=True):
         piece = self.current_piece
@@ -202,23 +222,26 @@ class Board:
                     piece.lock_resets = 0
 
                 self.rotated_this_frame = True
-                return
+                return True
 
         # Revert if no kick worked
         piece.rotation = old_rot
         piece.shape = piece.PIECE_SHAPES[piece.piece_type][old_rot]
         piece.x, piece.y = old_x, old_y
+        return False
 
     # -----------------------------
     # Hard Drop
     # -----------------------------
     def hard_drop(self):
         if not self.current_piece:
-            return
+            return {"lines_cleared": 0, "board_full": False}
+
         offset = self.find_lowest_valid_move()
         self.current_piece.move(0, offset)
         self.current_piece.state = PieceState.LOCKED
-        self.lock_piece()
+        lock_info = self.lock_piece()  # capture the lines cleared / board state
+        return lock_info
 
     def setup_t_or_z_spin(self):
         self.current_piece = Piece(PieceType.T)
