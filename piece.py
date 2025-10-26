@@ -18,7 +18,9 @@ class Piece:
         self.piece_type = piece_type or self.randomizer.next_piece()
         self.rotation = 0
         self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
+        self.PIECE_SHAPES = PIECE_SHAPES
 
+        # Spawn position
         if self.piece_type.name in ("I", "O"):
             self.x = int((globals.BOARD_WIDTH / 2) - 2)
         else:
@@ -29,92 +31,81 @@ class Piece:
         self.last_y = self.y
 
         self.state = PieceState.SPAWNING
-        print("------\nSPAWNING")
         self.lock_timer = 0
         self.lock_resets = 0
 
     def update(self, board, moved=False, rotated=False):
-        """Call each frame to handle gravity, lock delay, and locking."""
+        """Call each frame to handle gravity, grounding, lock delay, and locking."""
         # Store previous frame position
         self.last_x = self.x
         self.last_y = self.y
 
+        # Gravity / Grounding
         if self.state in (PieceState.SPAWNING, PieceState.FALLING):
             if self.is_grounded(board):
                 self.state = PieceState.GROUNDED
                 self.lock_timer = 0
-                print("GROUNDED")
             else:
-                if self.state != PieceState.FALLING:
-                    print("FALLING")
                 self.state = PieceState.FALLING
 
+        # Lock handling
         elif self.state == PieceState.GROUNDED:
             self.lock_timer += 1
 
-            # Reset lock timer only if piece moved/rotated meaningfully
+            # Reset lock timer if moved/rotated meaningfully
             if (moved or rotated) and self.lock_resets < self.MAX_LOCK_RESETS:
                 if self.x != self.last_x or self.y != self.last_y:
                     self.lock_timer = 0
                     self.lock_resets += 1
-                    print(f"Lock timer reset ({self.lock_resets}/{self.MAX_LOCK_RESETS})")
 
-            # Only lock if actually still grounded
+            # Lock if grounded and timer exceeded
             if self.is_grounded(board) and self.lock_timer >= self.LOCK_DELAY_FRAMES:
                 self.state = PieceState.LOCKED
-                print("LOCKED")
-            # No ungrounding here — rotations already handle it
 
     def iter_cells(self):
-        """Yield x, y, and value for each cell in x-first order."""
-        for x in range(len(self.shape[0])):  # columns
-            for y in range(len(self.shape)):  # rows
+        """Yield x, y, value for each occupied cell (x-major)."""
+        for x in range(len(self.shape[0])):
+            for y in range(len(self.shape)):
                 yield x, y, self.shape[y][x]
+
+    def move(self, dx, dy):
+        self.x += dx
+        self.y += dy
 
     def rotate_cw(self):
         self.rotation = (self.rotation + 1) % 4
-        self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
+        self.shape = self.PIECE_SHAPES[self.piece_type][self.rotation]
 
     def rotate_ccw(self):
         self.rotation = (self.rotation - 1) % 4
-        self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
+        self.shape = self.PIECE_SHAPES[self.piece_type][self.rotation]
 
     # -----------------------------
-    # Gravity and lock handling
+    # Gravity / Lock Helpers
     # -----------------------------
     def can_move_down(self, board):
-        """Return True if piece can move down by 1 without collision."""
         for x, y, val in self.iter_cells():
-            if not val:
+            if val == 0:
                 continue
-            board_x = self.x + x
-            board_y = self.y + y + 1
-
-            # skip cells above the board
-            if board_y < 0:
-                continue
-
-            # bottom boundary
-            if board_y >= globals.BOARD_HEIGHT:
+            bx = self.x + x
+            by = self.y + y + 1
+            if by >= globals.BOARD_HEIGHT:
                 return False
-
-            # x-major grid collision check
-            if board.grid[board_x][board_y] != 0:
+            if by >= 0 and board.grid[bx][by] != 0:
                 return False
-
         return True
-    
+
     def is_grounded(self, board):
-        """Return True if the piece cannot move down (any bottom-most cell collides)."""
-        for x in range(len(self.shape[0])):  # each column
-            for y in reversed(range(len(self.shape))):  # bottom-to-top
+        """True if the piece cannot move down safely."""
+        for x in range(len(self.shape[0])):
+            for y in reversed(range(len(self.shape))):
                 if self.shape[y][x] == 0:
                     continue
-                board_x = self.x + x
-                board_y = self.y + y + 1
-                if board_y >= globals.BOARD_HEIGHT:
-                    return True  # bottom of board
-                if board.grid[board_x][board_y] != 0:
-                    return True  # collision with stack
-                break  # stop at first filled cell in this column
+                bx = self.x + x
+                by = self.y + y + 1
+                if by >= globals.BOARD_HEIGHT:
+                    return True
+                if by >= 0 and board.grid[bx][by] != 0:
+                    return True
+                break
         return False

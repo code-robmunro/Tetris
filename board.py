@@ -7,33 +7,26 @@ import sprite_utils
 
 class Board:
     MAX_LOCK_RESETS = 15
-    
+
     def __init__(self):
         self.moved_this_frame = False
         self.rotated_this_frame = False
 
-        # grid[x][y] - x-major storage
+        # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
         self.piece_bits = self.load_piece_bits()
-        self.play_area = pygame.Surface((globals.BOARD_WIDTH * globals.TETRIS_BIT_24_WIDTH,
-                                         globals.BOARD_HEIGHT * globals.TETRIS_BIT_24_HEIGHT))
+        self.play_area = pygame.Surface(
+            (globals.BOARD_WIDTH * globals.TETRIS_BIT_24_WIDTH,
+             globals.BOARD_HEIGHT * globals.TETRIS_BIT_24_HEIGHT)
+        )
         self.current_piece = None
 
-        self.lock_delay = 0.5          # how long a grounded piece waits before locking
-        self.lock_elapsed = 0           # timer counting up
-        self.grounded_last_frame = False  # was the piece grounded last frame?
-        self.lock_resets = 0
+        # Rotation spin bug
+        # self.setup_t_or_z_spin()
 
-        # # Preset pieces for testing
-        # self.grid[0][19] = int(PieceType.L)
-        # self.grid[1][19] = int(PieceType.L)
-        # self.grid[2][19] = int(PieceType.L)
-        # self.grid[2][18] = int(PieceType.L)
-        # self.grid[4][19] = int(PieceType.O)
-        # self.grid[5][19] = int(PieceType.O)
-        # self.grid[4][18] = int(PieceType.O)
-        # self.grid[5][18] = int(PieceType.O)
-
+    # -----------------------------
+    # Update / Draw
+    # -----------------------------
     def update(self, delta_time):
         if self.current_piece:
             self.current_piece.update(
@@ -42,247 +35,200 @@ class Board:
                 rotated=self.rotated_this_frame
             )
 
-            # Handle piece locking
             if self.current_piece.state == PieceState.LOCKED:
                 self.lock_piece()
 
-        # Reset flags after update
         self.moved_this_frame = False
         self.rotated_this_frame = False
 
     def draw(self, screen):
-        self.play_area.fill((0,0,0))
-        for x, row in enumerate(self.grid):
-            for y, cell_value in enumerate(row):
-                if cell_value:
-                    self.draw_bit(cell_value, x, y)
+        self.play_area.fill((0, 0, 0))
+        for x, col in enumerate(self.grid):
+            for y, val in enumerate(col):
+                if val:
+                    self.draw_bit(val, x, y)
 
-        ghost_offset = self.find_lowest_valid_move()
-        for x, y, value in self.current_piece.iter_cells():
-            self.draw_bit(value, x + self.current_piece.x, y + self.current_piece.y + ghost_offset, ghost=True)
+        if self.current_piece:
+            ghost_offset = self.find_lowest_valid_move()
+            for x, y, val in self.current_piece.iter_cells():
+                if val:
+                    self.draw_bit(val, x + self.current_piece.x, y + self.current_piece.y + ghost_offset, ghost=True)
 
-        for x, y, value in self.current_piece.iter_cells():
-            self.draw_bit(value, x + self.current_piece.x, y + self.current_piece.y)
+            for x, y, val in self.current_piece.iter_cells():
+                if val:
+                    self.draw_bit(val, x + self.current_piece.x, y + self.current_piece.y)
 
         screen.blit(self.play_area, (280, 64))
 
     # -----------------------------
-    # Utility / Helper methods
+    # Utility
     # -----------------------------
     def load_piece_bits(self):
         piece_bit_sheet = assets.load_image(globals.TETRIS_BIT_24_SHEET)
-        piece_bits = []
-        for i in range(7):
-            piece_bits.append(sprite_utils.get_sprite(piece_bit_sheet, i * 24, 0, 24, 24))
+        return [sprite_utils.get_sprite(piece_bit_sheet, i * 24, 0, 24, 24) for i in range(7)]
 
-        return piece_bits
-    
-    def draw_bit(self, cell_value, grid_x, grid_y, ghost=False):
-        if cell_value == 0:
-            return
-
-        # Get the surface
-        surf = self.piece_bits[cell_value - 1]
-
-        # If ghost flag is set, make a transparent copy
+    def draw_bit(self, val, grid_x, grid_y, ghost=False):
+        surf = self.piece_bits[val - 1]
         if ghost:
             surf = surf.copy()
-            surf.set_alpha(64)  # 25% opacity (255 * 0.25 ≈ 64)
-
+            surf.set_alpha(64)
         self.play_area.blit(
             surf,
-            (
-                grid_x * globals.TETRIS_BIT_24_WIDTH,
-                grid_y * globals.TETRIS_BIT_24_HEIGHT,
-            )
+            (grid_x * globals.TETRIS_BIT_24_WIDTH,
+             grid_y * globals.TETRIS_BIT_24_HEIGHT)
         )
 
+    # -----------------------------
+    # Placement / Validation
+    # -----------------------------
     def place_piece(self, piece: Piece):
+        if self.current_piece is not None:
+            return
         self.current_piece = piece
-        if not self.is_position_valid():
-            return False
-        return True
+        return self.is_position_valid()
 
-    # -----------------------------
-    # Logic methods
-    # -----------------------------
     def can_move(self, dx, dy):
-        """Return True if the current piece can move by (dx, dy)."""
         return self.is_position_valid(self.current_piece, dx, dy)
 
     def is_position_valid(self, piece=None, dx=0, dy=0):
-        """Return True if `piece` at (piece.x+dx, piece.y+dy) is within bounds and not colliding."""
         if piece is None:
             piece = self.current_piece
 
         for cell_x, cell_y, value in piece.iter_cells():
             if value == 0:
                 continue
-
             board_x = piece.x + cell_x + dx
             board_y = piece.y + cell_y + dy
 
-            # horizontal bounds
             if board_x < 0 or board_x >= globals.BOARD_WIDTH:
                 return False
-
-            # vertical bounds (bottom)
             if board_y >= globals.BOARD_HEIGHT:
                 return False
-
-            # above the board: allowed
             if board_y < 0:
-                continue
-
-            # overlap with grid
+                continue  # allow above board
             if self.grid[board_x][board_y] != 0:
                 return False
-
         return True
 
     def find_lowest_valid_move(self):
         y = 1
         while self.can_move(0, y):
             y += 1
+        offset = y - 1
+        return offset
 
-        return y - 1
-    
+    # -----------------------------
+    # Locking / Clearing
+    # -----------------------------
     def lock_piece(self):
-        for cell_x, cell_y, value in self.current_piece.iter_cells():
-            if value == 0:
+        for x, y, val in self.current_piece.iter_cells():
+            if val == 0:
                 continue
-
-            board_x = self.current_piece.x + cell_x
-            board_y = self.current_piece.y + cell_y
-
-            if board_y < 0:
-                # piece above the board — skip (game over will be handled in Game)
-                continue
-
-            self.grid[board_x][board_y] = value
-
-        # clear timers
-        self.lock_elapsed = 0
-        self.grounded_last_frame = False
+            bx = self.current_piece.x + x
+            by = self.current_piece.y + y
+            if 0 <= bx < globals.BOARD_WIDTH and 0 <= by < globals.BOARD_HEIGHT:
+                self.grid[bx][by] = val
 
         self.clear_lines()
-
-        # spawn a new piece
         self.current_piece = None
 
     def clear_lines(self):
         complete_lines = self.detect_complete_lines()
-        if not complete_lines:
-            return
-        self.remove_lines(complete_lines)
+        for row in complete_lines:
+            self.remove_row(row)
 
     def detect_complete_lines(self):
         complete_lines = []
-        for i in range(len(self.grid[0])):
-            row = [col[i] for col in self.grid]
-            for cell in row:
-                if cell == 0:
-                    break
-            else:
-                complete_lines.append(i)
-
+        for y in range(globals.BOARD_HEIGHT):
+            if all(self.grid[x][y] != 0 for x in range(globals.BOARD_WIDTH)):
+                complete_lines.append(y)
         return complete_lines
 
-    def remove_lines(self, complete_lines):
-        for i in complete_lines:
-            self.remove_row(i)
-            
-    def remove_row(self, row_index):
-        for col in self.grid:
-            del col[row_index]
-            col.insert(0, 0)    
+    def remove_row(self, row):
+        for x in range(globals.BOARD_WIDTH):
+            del self.grid[x][row]
+            self.grid[x].insert(0, 0)
 
     # -----------------------------
-    # Movement / rotation methods
+    # Movement / Rotation
     # -----------------------------
     def move_left(self):
         if self.can_move(-1, 0):
-            self.current_piece.x -= 1
+            self.current_piece.move(-1, 0)
             self.moved_this_frame = True
-                
+
     def move_right(self):
         if self.can_move(1, 0):
-            self.current_piece.x += 1
+            self.current_piece.move(1, 0)
             self.moved_this_frame = True
 
     def move_down(self):
         if self.can_move(0, 1):
-            self.current_piece.y += 1
+            self.current_piece.move(0, 1)
             self.moved_this_frame = True
 
     def rotate_cw(self):
-        piece = self.current_piece
-        old_rot = piece.rotation
-        old_x, old_y = piece.x, piece.y
-        grounded_before = piece.state == PieceState.GROUNDED
-
-        piece.rotate_cw()
-        new_rot = piece.rotation
-
-        for dx, dy in WALL_KICKS[piece.piece_type].get((old_rot, new_rot), [(0, 0)]):
-            if self.is_position_valid(dx=dx, dy=dy):
-                piece.x += dx
-                piece.y += dy
-
-                # Only unground if rotation actually lifted the piece
-                if grounded_before and piece.y < old_y:
-                    piece.state = PieceState.FALLING
-                    piece.lock_timer = 0
-                    piece.lock_resets = 0
-                    print("UNGROUNDED -> FALLING (rotation)")
-
-                self.rotated_this_frame = True
-                return
-
-        # No valid kick worked — revert
-        piece.rotate_ccw()
-        piece.rotation = old_rot
-        piece.x = old_x
-        piece.y = old_y
+        self._rotate(True)
 
     def rotate_ccw(self):
+        self._rotate(False)
+
+    def _rotate(self, clockwise=True):
         piece = self.current_piece
         old_rot = piece.rotation
         old_x, old_y = piece.x, piece.y
         grounded_before = piece.state == PieceState.GROUNDED
 
-        piece.rotate_ccw()
-        new_rot = piece.rotation
+        if clockwise:
+            piece.rotate_cw()
+            new_rot = piece.rotation
+        else:
+            piece.rotate_ccw()
+            new_rot = piece.rotation
 
-        for dx, dy in WALL_KICKS[piece.piece_type].get((old_rot, new_rot), [(0, 0)]):
-            if self.is_position_valid(dx=dx, dy=dy):
-                piece.x += dx
-                piece.y += dy
+        # Try wall kicks
+        for dx, dy in WALL_KICKS.get(piece.piece_type, {}).get((old_rot, new_rot), [(0, 0)]):
+            piece.x = old_x + dx
+            piece.y = old_y + dy
+            if self.is_position_valid(piece):
+                # Clamp bottom if necessary
+                max_y = max((cy for _, cy, val in piece.iter_cells() if val), default=0)
+                if piece.y + max_y >= globals.BOARD_HEIGHT:
+                    piece.y = globals.BOARD_HEIGHT - (max_y + 1)
 
-                # Only unground if rotation actually lifted the piece
                 if grounded_before and piece.y < old_y:
                     piece.state = PieceState.FALLING
                     piece.lock_timer = 0
                     piece.lock_resets = 0
-                    print("UNGROUNDED -> FALLING (rotation)")
 
                 self.rotated_this_frame = True
                 return
 
-        # No valid kick worked — revert
-        piece.rotate_cw()
+        # Revert if no kick worked
         piece.rotation = old_rot
-        piece.x = old_x
-        piece.y = old_y
+        piece.shape = piece.PIECE_SHAPES[piece.piece_type][old_rot]
+        piece.x, piece.y = old_x, old_y
 
+    # -----------------------------
+    # Hard Drop
+    # -----------------------------
     def hard_drop(self):
         if not self.current_piece:
             return
         offset = self.find_lowest_valid_move()
-        self.current_piece.y += offset
-        self.moved_this_frame = True
-
-        # Lock instantly
+        self.current_piece.move(0, offset)
         self.current_piece.state = PieceState.LOCKED
         self.lock_piece()
-        self.current_piece = None
+
+    def setup_t_or_z_spin(self):
+        self.current_piece = Piece(PieceType.T)
+
+        self.grid[2][19] = int(PieceType.T)
+        self.grid[1][18] = int(PieceType.T)
+        self.grid[2][18] = int(PieceType.T)
+        self.grid[2][17] = int(PieceType.T)
+
+        self.grid[6][19] = int(PieceType.Z)
+        self.grid[5][18] = int(PieceType.Z)
+        self.grid[6][18] = int(PieceType.Z)
+        self.grid[5][17] = int(PieceType.Z)

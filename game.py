@@ -43,8 +43,8 @@ class Game:
         # Load your music
         pygame.mixer.music.load("assets/sound/tetris.wav")
 
-        # Play the music indefinitely (loops=-1)
-        pygame.mixer.music.play(loops=-1)
+        pygame.mixer.music.set_volume(0.05)
+        pygame.mixer.music.play(loops=-1, fade_ms=1000)
 
     async def run(self):
         while self.running:
