@@ -33,6 +33,38 @@ class Piece:
         self.lock_timer = 0
         self.lock_resets = 0
 
+    def update(self, board, moved=False, rotated=False):
+        """Call each frame to handle gravity, lock delay, and locking."""
+        # Store previous frame position
+        self.last_x = self.x
+        self.last_y = self.y
+
+        if self.state in (PieceState.SPAWNING, PieceState.FALLING):
+            if self.is_grounded(board):
+                self.state = PieceState.GROUNDED
+                self.lock_timer = 0
+                print("GROUNDED")
+            else:
+                if self.state != PieceState.FALLING:
+                    print("FALLING")
+                self.state = PieceState.FALLING
+
+        elif self.state == PieceState.GROUNDED:
+            self.lock_timer += 1
+
+            # Reset lock timer only if piece moved/rotated meaningfully
+            if (moved or rotated) and self.lock_resets < self.MAX_LOCK_RESETS:
+                if self.x != self.last_x or self.y != self.last_y:
+                    self.lock_timer = 0
+                    self.lock_resets += 1
+                    print(f"Lock timer reset ({self.lock_resets}/{self.MAX_LOCK_RESETS})")
+
+            # Only lock if actually still grounded
+            if self.is_grounded(board) and self.lock_timer >= self.LOCK_DELAY_FRAMES:
+                self.state = PieceState.LOCKED
+                print("LOCKED")
+            # No ungrounding here — rotations already handle it
+
     def iter_cells(self):
         """Yield x, y, and value for each cell in x-first order."""
         for x in range(len(self.shape[0])):  # columns
@@ -86,35 +118,3 @@ class Piece:
                     return True  # collision with stack
                 break  # stop at first filled cell in this column
         return False
-
-    def update(self, board, moved=False, rotated=False):
-        """Call each frame to handle gravity, lock delay, and locking."""
-        # Store previous frame position
-        self.last_x = self.x
-        self.last_y = self.y
-
-        if self.state in (PieceState.SPAWNING, PieceState.FALLING):
-            if self.is_grounded(board):
-                self.state = PieceState.GROUNDED
-                self.lock_timer = 0
-                print("GROUNDED")
-            else:
-                if self.state != PieceState.FALLING:
-                    print("FALLING")
-                self.state = PieceState.FALLING
-
-        elif self.state == PieceState.GROUNDED:
-            self.lock_timer += 1
-
-            # Reset lock timer only if piece moved/rotated meaningfully
-            if (moved or rotated) and self.lock_resets < self.MAX_LOCK_RESETS:
-                if self.x != self.last_x or self.y != self.last_y:
-                    self.lock_timer = 0
-                    self.lock_resets += 1
-                    print(f"Lock timer reset ({self.lock_resets}/{self.MAX_LOCK_RESETS})")
-
-            # Only lock if actually still grounded
-            if self.is_grounded(board) and self.lock_timer >= self.LOCK_DELAY_FRAMES:
-                self.state = PieceState.LOCKED
-                print("LOCKED")
-            # No ungrounding here — rotations already handle it

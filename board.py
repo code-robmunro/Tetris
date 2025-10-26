@@ -34,6 +34,21 @@ class Board:
         # self.grid[4][18] = int(PieceType.O)
         # self.grid[5][18] = int(PieceType.O)
 
+    def update(self, delta_time):
+        if self.current_piece:
+            self.current_piece.update(
+                board=self,
+                moved=self.moved_this_frame,
+                rotated=self.rotated_this_frame
+            )
+
+            # Handle piece locking
+            if self.current_piece.state == PieceState.LOCKED:
+                self.lock_piece()
+
+        # Reset flags after update
+        self.moved_this_frame = False
+        self.rotated_this_frame = False
 
     def draw(self, screen):
         self.play_area.fill((0,0,0))
@@ -51,22 +66,9 @@ class Board:
 
         screen.blit(self.play_area, (280, 64))
 
-    def update(self, delta_time):
-        if self.current_piece:
-            self.current_piece.update(
-                board=self,
-                moved=self.moved_this_frame,
-                rotated=self.rotated_this_frame
-            )
-
-            # Handle piece locking
-            if self.current_piece.state == PieceState.LOCKED:
-                self.lock_piece()
-
-        # Reset flags after update
-        self.moved_this_frame = False
-        self.rotated_this_frame = False
-
+    # -----------------------------
+    # Utility / Helper methods
+    # -----------------------------
     def load_piece_bits(self):
         piece_bit_sheet = assets.load_image(globals.TETRIS_BIT_24_SHEET)
         piece_bits = []
@@ -101,36 +103,24 @@ class Board:
             return False
         return True
 
-    def move_down(self):
-        if self.can_move(0, 1):
-            self.current_piece.y += 1
-            self.moved_this_frame = True
+    # -----------------------------
+    # Logic methods
+    # -----------------------------
+    def can_move(self, dx, dy):
+        """Return True if the current piece can move by (dx, dy)."""
+        return self.is_position_valid(self.current_piece, dx, dy)
 
-    def find_lowest_valid_move(self):
-        y = 1
-        while self.can_move(0, y):
-            y += 1
+    def is_position_valid(self, piece=None, dx=0, dy=0):
+        """Return True if `piece` at (piece.x+dx, piece.y+dy) is within bounds and not colliding."""
+        if piece is None:
+            piece = self.current_piece
 
-        return y - 1
-    
-    def move_left(self):
-        if self.can_move(-1, 0):
-            self.current_piece.x -= 1
-            self.moved_this_frame = True
-                
-    def move_right(self):
-        if self.can_move(1, 0):
-            self.current_piece.x += 1
-            self.moved_this_frame = True
-    
-    def is_position_valid(self, dx=0, dy=0):
-        """Return True if the piece at (x+dx, y+dy) is within board and not colliding."""
-        for cell_x, cell_y, value in self.current_piece.iter_cells():
+        for cell_x, cell_y, value in piece.iter_cells():
             if value == 0:
                 continue
 
-            board_x = self.current_piece.x + cell_x + dx
-            board_y = self.current_piece.y + cell_y + dy
+            board_x = piece.x + cell_x + dx
+            board_y = piece.y + cell_y + dy
 
             # horizontal bounds
             if board_x < 0 or board_x >= globals.BOARD_WIDTH:
@@ -150,8 +140,80 @@ class Board:
 
         return True
 
-    def can_move(self, dx, dy):
-        return self.is_position_valid(dx, dy)
+    def find_lowest_valid_move(self):
+        y = 1
+        while self.can_move(0, y):
+            y += 1
+
+        return y - 1
+    
+    def lock_piece(self):
+        for cell_x, cell_y, value in self.current_piece.iter_cells():
+            if value == 0:
+                continue
+
+            board_x = self.current_piece.x + cell_x
+            board_y = self.current_piece.y + cell_y
+
+            if board_y < 0:
+                # piece above the board — skip (game over will be handled in Game)
+                continue
+
+            self.grid[board_x][board_y] = value
+
+        # clear timers
+        self.lock_elapsed = 0
+        self.grounded_last_frame = False
+
+        self.clear_lines()
+
+        # spawn a new piece
+        self.current_piece = None
+
+    def clear_lines(self):
+        complete_lines = self.detect_complete_lines()
+        if not complete_lines:
+            return
+        self.remove_lines(complete_lines)
+
+    def detect_complete_lines(self):
+        complete_lines = []
+        for i in range(len(self.grid[0])):
+            row = [col[i] for col in self.grid]
+            for cell in row:
+                if cell == 0:
+                    break
+            else:
+                complete_lines.append(i)
+
+        return complete_lines
+
+    def remove_lines(self, complete_lines):
+        for i in complete_lines:
+            self.remove_row(i)
+            
+    def remove_row(self, row_index):
+        for col in self.grid:
+            del col[row_index]
+            col.insert(0, 0)    
+
+    # -----------------------------
+    # Movement / rotation methods
+    # -----------------------------
+    def move_left(self):
+        if self.can_move(-1, 0):
+            self.current_piece.x -= 1
+            self.moved_this_frame = True
+                
+    def move_right(self):
+        if self.can_move(1, 0):
+            self.current_piece.x += 1
+            self.moved_this_frame = True
+
+    def move_down(self):
+        if self.can_move(0, 1):
+            self.current_piece.y += 1
+            self.moved_this_frame = True
 
     def rotate_cw(self):
         piece = self.current_piece
@@ -183,7 +245,6 @@ class Board:
         piece.x = old_x
         piece.y = old_y
 
-
     def rotate_ccw(self):
         piece = self.current_piece
         old_rot = piece.rotation
@@ -214,8 +275,6 @@ class Board:
         piece.x = old_x
         piece.y = old_y
 
-
-
     def hard_drop(self):
         if not self.current_piece:
             return
@@ -226,25 +285,4 @@ class Board:
         # Lock instantly
         self.current_piece.state = PieceState.LOCKED
         self.lock_piece()
-        self.current_piece = None
-
-    def lock_piece(self):
-        for cell_x, cell_y, value in self.current_piece.iter_cells():
-            if value == 0:
-                continue
-
-            board_x = self.current_piece.x + cell_x
-            board_y = self.current_piece.y + cell_y
-
-            if board_y < 0:
-                # piece above the board — skip (game over will be handled in Game)
-                continue
-
-            self.grid[board_x][board_y] = value
-
-        # clear timers
-        self.lock_elapsed = 0
-        self.grounded_last_frame = False
-
-        # spawn a new piece
         self.current_piece = None

@@ -16,6 +16,8 @@ class Game:
         self.screen = screen
         self.running = True
         self.delta_time = self.clock.get_time() / 1000
+        self.paused = False
+        self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
 
         self.ui = UI()
         self.board = Board()
@@ -33,19 +35,35 @@ class Game:
         self.seconds_per_row = 0.2 # 1
         self.lock_delay = 0.5 # Grounded slide / wall kick - Level 1
         self.soft_drop_timer = 0
-        self.soft_drop_active = False  
+        self.soft_drop_active = False 
+
+        # Initialize Pygame mixer
+        pygame.mixer.init()
+
+        # Load your music
+        pygame.mixer.music.load("assets/sound/tetris.wav")
+
+        # Play the music indefinitely (loops=-1)
+        pygame.mixer.music.play(loops=-1)
 
     async def run(self):
         while self.running:
             self.handle_input()
-            self.update()
-            self.draw()
+
+            if not self.paused:
+                self.update()
+            self.draw()  # always draw so you can see the paused frame
+
+            # Optional: draw pause text
+            if self.paused:
+                pause_text = self.font.render("PAUSED", True, (255, 255, 0))
+                self.screen.blit(pause_text, (100, 100))
+                
+            pygame.display.flip()
 
             self.clock.tick(60)
-            # yield control back to pygbag/browser
-            await asyncio.sleep(0)
+            await asyncio.sleep(0)  # keep async flow for pygbag/browser
 
-        # Quit pygame
         pygame.quit()
         sys.exit()
 
@@ -70,6 +88,11 @@ class Game:
                     self.rotate_ccw()
                 elif event.key == pygame.K_LSHIFT:
                     self.hold_piece()
+                elif event.key == pygame.K_p:
+                    self.paused = not self.paused
+                    print(f"Paused: {self.paused}")
+                elif event.key == pygame.K_b:
+                    breakpoint()
 
             elif event.type == pygame.KEYUP:
                 if event.key in (pygame.K_s, pygame.K_DOWN):
@@ -77,7 +100,7 @@ class Game:
 
     def update(self):
         self.delta_time = self.clock.tick(60) / 1000
-        
+
         # Update gravity
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
@@ -95,6 +118,17 @@ class Game:
         if self.board.current_piece is None:
             self.spawn_piece()
 
+    def draw(self):
+        self.ui.draw(self.screen)
+        self.board.draw(self.screen)
+
+    def spawn_piece(self):
+        piece = Piece()
+
+        if not self.board.place_piece(piece):
+            self.state = "GAME_OVER"
+            return
+
     def handle_piece_lock(self):
         if self.last_lock_info["lines_cleared"]:
             self.score += self.calculate_line_score(self.last_lock_info["lines_cleared"])
@@ -106,25 +140,14 @@ class Game:
         # Spawn next piece
             self.spawn_piece()
 
-    def spawn_piece(self):
-        piece = Piece()
-
-        if not self.board.place_piece(piece):
-            self.state = "GAME_OVER"
-            return
-
+    # -----------------------------
+    # Input event handlers
+    # -----------------------------
     def move_down(self):
         self.board.move_down()
         
         if self.soft_drop_active == True:
             self.gravity_time = 0        
-
-    def draw(self):
-        self.ui.draw(self.screen)
-        self.board.draw(self.screen)
-
-        # Update the display
-        pygame.display.flip()
 
     def move_left(self):
         self.board.move_left()
