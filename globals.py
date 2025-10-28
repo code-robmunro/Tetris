@@ -68,7 +68,7 @@ SCORE_BORDER_RECT = pygame.Rect(546, 426, 195, 124)
 BOARD_WIDTH = 10
 BOARD_HEIGHT = 20
 
-TETRIS_SONG = "assets/sound/tetris.wav"
-MOVE_SOUND = "assets/sound/move.wav"
-ROTATE_SOUND = "assets/sound/rotate.wav"
+TETRIS_SONG = "assets/sound/tetris.ogg"
+MOVE_SOUND = "assets/sound/move.ogg"
+ROTATE_SOUND = "assets/sound/rotate.ogg"
 LINE_CLEAR_SOUND = "assets/sound/line_clear.ogg"
