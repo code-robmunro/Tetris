@@ -77,3 +77,17 @@ TETRIS_SONG = "assets/sound/tetris.ogg"
 MOVE_SOUND = "assets/sound/move.ogg"
 ROTATE_SOUND = "assets/sound/rotate.ogg"
 LINE_CLEAR_SOUND = "assets/sound/line_clear.ogg"
+
+FONT = "assets/fonts/Montserrat-SemiBold.ttf"
+
+LEVEL_TXT = "Level "
+LINES_TXT = "Lines - "
+NEXT_TXT = "Next"
+HELD_TXT = "Held"
+SCORE_TXT = "Score - "
+TOP_SCORE_TXT = "Top - "
+
+LEVEL_SPEEDS = [
+    1.0, 0.793, 0.618, 0.473, 0.355, 0.262, 0.190, 0.135, 0.094, 0.064,
+    0.043, 0.028, 0.018, 0.011, 0.007, 0.004, 0.003, 0.002, 0.001, 0.001
+]

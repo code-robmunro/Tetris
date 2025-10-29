@@ -23,11 +23,7 @@ class PieceRandomizer:
     def next_piece(self):
         if len(self.bag) <= 5:
             self._refill_bag()
-        nxt = self.bag.pop()
-        print(f"Bag: {self.bag}")
-        next_pieces = self.next_pieces()
-        print(f"Next Pieces: {next_pieces}")
-        return nxt
+        return self.bag.pop()
         
     def next_pieces(self):
         return self.bag[-5:][::-1]

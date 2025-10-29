@@ -1,6 +1,7 @@
 import pygame
 import sys
 import asyncio
+import globals
 from ui import UI
 from soundmanager import SoundManager
 from board import Board
@@ -21,11 +22,17 @@ class Game:
         self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
 
         self.ui = UI()
+        self.on_level_change_callback = self.ui.handle_level_change
+        self.on_lines_change_callback = self.ui.handle_lines_change
+        self.on_score_change_callback = self.ui.handle_score_change
+
         self.sound = SoundManager()
         self.sound.play_music()
         self.board = Board()
 
         self.state = "PLAYING"
+        self.level = 5
+        self.lines_cleared = 0
         self.score = 0
         self.spawn_piece()
 
@@ -35,7 +42,7 @@ class Game:
         }
 
         self.gravity_time = 0
-        self.seconds_per_row = 0.2 # 1
+        self.seconds_per_row = globals.LEVEL_SPEEDS[min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)]
         self.lock_delay = 0.5 # Grounded slide / wall kick - Level 1
         self.soft_drop_timer = 0
         self.soft_drop_active = False 
@@ -130,14 +137,28 @@ class Game:
     def handle_piece_lock(self, lock_info):
         if lock_info["lines_cleared"] > 0:
             self.sound.play("line_clear")
-            self.score += self.calculate_line_score(lock_info["lines_cleared"])
+            self.lines_cleared += lock_info["lines_cleared"]
+            self.on_lines_change()
+            self.calculate_level()
+            self.score += self.calculate_score_score(lock_info["lines_cleared"])
         
         if lock_info["board_full"]:
             self.state = "GAME_OVER"
         else:
             self.spawn_piece()
 
-    def calculate_line_score(self, lines_cleared):
+    def total_lines_for_level(self, level):
+        # Returns cumulative total lines needed to reach the given level
+        # Level 1 → 2 requires 20 lines
+        return 10 * (level * (level + 1) // 2) - 10
+
+    def calculate_level(self):
+        while self.lines_cleared >= self.total_lines_for_level(self.level + 1):
+            self.level += 1
+            self.on_level_change()
+            self.seconds_per_row = globals.LEVEL_SPEEDS[min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)]
+
+    def calculate_score_score(self, lines_cleared):
         return 0
 
     # -----------------------------
@@ -174,3 +195,19 @@ class Game:
 
     def hold_piece(self):
         pass
+
+    # -----------------------------
+    # Callbacks
+    # -----------------------------
+    def on_level_change(self):
+        if self.on_level_change_callback:
+            self.on_level_change_callback(self.level)
+            print(f"Leveled - {self.level - 1} to {self.level} with {self.lines_cleared}")
+
+    def on_lines_change(self):
+        if self.on_lines_change_callback:
+            self.on_lines_change_callback(self.lines_cleared)
+
+    def on_score_change(self):
+        if self.on_score_change_callback:
+            self.on_score_change_callback(self.score)
