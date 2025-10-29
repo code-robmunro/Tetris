@@ -24,7 +24,7 @@ class SoundManager:
     def play_music(self, loop=True, volume=0.1, fade_ms=1000):
         pygame.mixer.music.load(self.background_music)
         pygame.mixer.music.set_volume(volume)
-        # pygame.mixer.music.play(loops=-1 if loop else 0, fade_ms=fade_ms)
+        pygame.mixer.music.play(loops=-1 if loop else 0, fade_ms=fade_ms)
 
     def stop_music(self, fade_ms=500):
         pygame.mixer.music.fadeout(fade_ms)
