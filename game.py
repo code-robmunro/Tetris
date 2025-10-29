@@ -31,8 +31,8 @@ class Game:
         self.board = Board()
 
         self.state = "PLAYING"
-        self.level = 5
-        self.lines_cleared = 0
+        self.level = 5 # 1
+        self.lines_cleared = 140 # 0
         self.score = 0
         self.spawn_piece()
 

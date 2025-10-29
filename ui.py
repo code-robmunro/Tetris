@@ -13,8 +13,8 @@ class UI:
         self.ui = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
         self.font_20 = pygame.font.Font(globals.FONT, 20)
         self.font_16 = pygame.font.Font(globals.FONT, 16)
-        self.current_level = 5
-        self.current_lines = 0
+        self.current_level = 5 # 1
+        self.current_lines = 140 # 0
         self.current_score = 0
         self.top_score = 0
         self.next_pieces = []
