@@ -110,6 +110,8 @@ class Game:
         if lock_info["lines_cleared"] > 0:
             self.handle_piece_lock(lock_info)
 
+        self.ui.update()
+
         # Spawn a new piece if needed
         if self.board.current_piece is None:
             self.spawn_piece()

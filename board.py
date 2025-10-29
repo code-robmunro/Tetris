@@ -14,7 +14,7 @@ class Board:
 
         # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
-        self.piece_bits = self.load_piece_bits()
+        self.piece_bits = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET)
         self.play_area = pygame.Surface(
             (globals.BOARD_WIDTH * globals.TETRIS_BIT_24_WIDTH,
              globals.BOARD_HEIGHT * globals.TETRIS_BIT_24_HEIGHT)
@@ -56,23 +56,14 @@ class Board:
 
         if self.current_piece:
             ghost_offset = self.find_lowest_valid_move()
-            for x, y, val in self.current_piece.iter_cells():
-                if val:
-                    self.draw_bit(val, x + self.current_piece.x, y + self.current_piece.y + ghost_offset, ghost=True)
+            self.current_piece.draw(self.play_area, y_offset=ghost_offset, ghost=True)
+            self.current_piece.draw(self.play_area)
 
-            for x, y, val in self.current_piece.iter_cells():
-                if val:
-                    self.draw_bit(val, x + self.current_piece.x, y + self.current_piece.y)
-
-        screen.blit(self.play_area, (280, 64))
+        screen.blit(self.play_area, globals.PLAY_AREA_BOX_RECT.topleft)
 
     # -----------------------------
     # Utility
     # -----------------------------
-    def load_piece_bits(self):
-        piece_bit_sheet = assets.load_image(globals.TETRIS_BIT_24_SHEET)
-        return [sprite_utils.get_sprite(piece_bit_sheet, i * 24, 0, 24, 24) for i in range(7)]
-
     def draw_bit(self, val, grid_x, grid_y, ghost=False):
         surf = self.piece_bits[val - 1]
         if ghost:

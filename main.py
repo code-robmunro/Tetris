@@ -4,6 +4,8 @@ import asyncio
 import assets
 from game import Game
 from globals import SCREEN_WIDTH, SCREEN_HEIGHT
+# import ctypes
+# ctypes.windll.user32.SetProcessDPIAware()
 
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))

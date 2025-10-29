@@ -1,6 +1,7 @@
 from piece_randomizer import PieceRandomizer
-from piece_data import PieceType, PIECE_SHAPES
+from piece_data import PIECE_SHAPES
 import globals
+import assets
 from enum import Enum, auto
 
 class PieceState(Enum):
@@ -14,8 +15,10 @@ class Piece:
     MAX_LOCK_RESETS = 15
     LOCK_DELAY_FRAMES = 30  # ~0.5 sec at 60fps
 
-    def __init__(self, piece_type=None):
+    def __init__(self, piece_type=None, piece_bit_size=24):
         self.piece_type = piece_type or self.randomizer.next_piece()
+        self.piece_bit_size = piece_bit_size
+        self.piece_sprites = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET if self.piece_bit_size == 24 else globals.TETRIS_BIT_16_SHEET, sprite_size=self.piece_bit_size)
         self.rotation = 0
         self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
         self.PIECE_SHAPES = PIECE_SHAPES
@@ -61,6 +64,23 @@ class Piece:
             # Lock if grounded and timer exceeded
             if self.is_grounded(board) and self.lock_timer >= self.LOCK_DELAY_FRAMES:
                 self.state = PieceState.LOCKED
+
+    def draw(self, surface, x_offset=0, y_offset=0, use_grid=True, ghost=False):
+        for x, y, val in self.iter_cells():
+            if val:
+                local_x = (x + self.x + x_offset) * self.piece_bit_size if use_grid else (x_offset + (x * self.piece_bit_size))
+                local_y = (y + self.y + y_offset) * self.piece_bit_size if use_grid else (y_offset + (y * self.piece_bit_size))
+                self.draw_bit(surface, val, local_x, local_y, ghost)
+
+    def draw_bit(self, surface, val, x, y, ghost=False):
+        surf = self.piece_sprites[val - 1]
+        if ghost:
+            surf = surf.copy()
+            surf.set_alpha(64)
+        surface.blit(
+            surf,
+            (x, y)
+        )
 
     def iter_cells(self):
         """Yield x, y, value for each occupied cell (x-major)."""

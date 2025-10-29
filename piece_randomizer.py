@@ -16,10 +16,18 @@ class PieceRandomizer:
         self._refill_bag()
 
     def _refill_bag(self):
-        self.bag = list(PieceType)
-        random.shuffle(self.bag)
+        new_pieces = list(PieceType)
+        random.shuffle(new_pieces)
+        self.bag[:0] = new_pieces
 
     def next_piece(self):
-        if not self.bag:
+        if len(self.bag) <= 5:
             self._refill_bag()
-        return self.bag.pop()
+        nxt = self.bag.pop()
+        print(f"Bag: {self.bag}")
+        next_pieces = self.next_pieces()
+        print(f"Next Pieces: {next_pieces}")
+        return nxt
+        
+    def next_pieces(self):
+        return self.bag[-5:][::-1]

@@ -12,6 +12,19 @@ def load_image(path, scale=None):
     
     return _assets[path]
 
+def load_piece_sprites(sheet_path, num_pieces=7, sprite_size=24):
+    """Return a list of piece-type surfaces, caching them in _assets."""
+    key = f"{sheet_path}_pieces"
+    if key not in _assets:
+        sheet = load_image(sheet_path)  # reuse the existing cache
+        sprites = []
+        for i in range(num_pieces):
+            sprite = pygame.Surface((sprite_size, sprite_size), pygame.SRCALPHA)
+            sprite.blit(sheet, (0, 0), pygame.Rect(i*sprite_size, 0, sprite_size, sprite_size))
+            sprites.append(sprite)
+        _assets[key] = sprites
+    return _assets[key]
+
 def preload():    
     # preload commonly used graphics
     piece_bit = load_image(globals.TETRIS_BIT_24_SHEET)

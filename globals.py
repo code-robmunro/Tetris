@@ -9,6 +9,11 @@ TETRIS_BIT_24_WIDTH = 24
 TETRIS_BIT_24_HEIGHT = 24
 TETRIS_BIT_24_SHEET_LENGTH = 11
 
+TETRIS_BIT_16_SHEET = "assets/graphics/tetris_bit_16.png"
+TETRIS_BIT_16_WIDTH = 16
+TETRIS_BIT_16_HEIGHT = 16
+TETRIS_BIT_16_SHEET_LENGTH = 11
+
 BACKGROUND = "assets/graphics/background.png"
 
 # PLAY_AREA_BOX = "assets/graphics/play_area_box.png"
