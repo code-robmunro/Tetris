@@ -140,7 +140,7 @@ class Game:
             self.lines_cleared += lock_info["lines_cleared"]
             self.on_lines_change()
             self.calculate_level()
-            self.score += self.calculate_score_score(lock_info["lines_cleared"])
+            self.calculate_score(lock_info)
         
         if lock_info["board_full"]:
             self.state = "GAME_OVER"
@@ -158,8 +158,9 @@ class Game:
             self.on_level_change()
             self.seconds_per_row = globals.LEVEL_SPEEDS[min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)]
 
-    def calculate_score_score(self, lines_cleared):
-        return 0
+    def calculate_score(self, lock_info):
+        self.score += globals.SCORES[lock_info["lines_cleared"] - 1] * (self.level + 1)
+        self.on_score_change()
 
     # -----------------------------
     # Input event handlers
