@@ -13,6 +13,7 @@ pygame.display.set_caption("Tetris")
 assets.preload()
 game = Game(screen)
 
+
 async def main():
     await game.run()
 

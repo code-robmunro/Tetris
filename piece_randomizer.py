@@ -1,5 +1,6 @@
 # piece_randomizer.py
-import random
+import random, time
+random.seed(time.time())
 from piece_data import PieceType
 
 class PieceRandomizer:
