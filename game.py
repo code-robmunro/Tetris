@@ -1,16 +1,19 @@
-import pygame
-import sys
 import asyncio
+import sys
+
+import pygame
+
 import globals
-from ui import UI
-from soundmanager import SoundManager
 from board import Board
 from piece import Piece
+from soundmanager import SoundManager
+from ui import UI
+
 
 class Game:
     GRAVITY_TIMER_GROWTH_FACTOR = 1.1
-    ENTRY_DELAY = 0.5 # Before next piece enters
-    DELAYED_AUTO_SHIFT = 0.17 # Before holding L/R results in repeated movement
+    ENTRY_DELAY = 0.5  # Before next piece enters
+    DELAYED_AUTO_SHIFT = 0.17  # Before holding L/R results in repeated movement
     SOFT_DROP_MULTIPLIER = 20
 
     def __init__(self, screen):
@@ -31,8 +34,8 @@ class Game:
         self.board = Board()
 
         self.state = "PLAYING"
-        self.level = 5 # 1
-        self.lines_cleared = 140 # 0
+        self.level = 5  # 1
+        self.lines_cleared = 140  # 0
         self.score = 0
         self.spawn_piece()
 
@@ -42,10 +45,12 @@ class Game:
         }
 
         self.gravity_time = 0
-        self.seconds_per_row = globals.LEVEL_SPEEDS[min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)]
-        self.lock_delay = 0.5 # Grounded slide / wall kick - Level 1
+        self.seconds_per_row = globals.LEVEL_SPEEDS[
+            min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)
+        ]
+        self.lock_delay = 0.5  # Grounded slide / wall kick - Level 1
         self.soft_drop_timer = 0
-        self.soft_drop_active = False 
+        self.soft_drop_active = False
 
     async def run(self):
         while self.running:
@@ -59,7 +64,7 @@ class Game:
             if self.paused:
                 pause_text = self.font.render("PAUSED", True, (255, 255, 0))
                 self.screen.blit(pause_text, (100, 100))
-                
+
             pygame.display.flip()
 
             self.clock.tick(60)
@@ -71,7 +76,7 @@ class Game:
     def handle_input(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                    self.running = False
+                self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
@@ -83,7 +88,11 @@ class Game:
                     self.soft_drop_active = True
                 elif event.key == pygame.K_SPACE:
                     self.hard_drop()
-                elif event.key == pygame.K_w or event.key == pygame.K_e or event.key == pygame.K_UP:
+                elif (
+                    event.key == pygame.K_w
+                    or event.key == pygame.K_e
+                    or event.key == pygame.K_UP
+                ):
                     self.rotate_cw()
                 elif event.key == pygame.K_q or event.key == pygame.K_z:
                     self.rotate_ccw()
@@ -110,7 +119,9 @@ class Game:
 
         # Move piece down based on gravity
         while self.gravity_time >= self.seconds_per_row:
-            self.move_down(from_input=self.soft_drop_active)  # gravity movement, no sound
+            self.move_down(
+                from_input=self.soft_drop_active
+            )  # gravity movement, no sound
             self.gravity_time -= self.seconds_per_row
 
         lock_info = self.board.update(self.delta_time)
@@ -141,7 +152,7 @@ class Game:
             self.on_lines_change()
             self.calculate_level()
             self.calculate_score(lock_info)
-        
+
         if lock_info["board_full"]:
             self.state = "GAME_OVER"
         else:
@@ -156,7 +167,9 @@ class Game:
         while self.lines_cleared >= self.total_lines_for_level(self.level + 1):
             self.level += 1
             self.on_level_change()
-            self.seconds_per_row = globals.LEVEL_SPEEDS[min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)]
+            self.seconds_per_row = globals.LEVEL_SPEEDS[
+                min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)
+            ]
 
     def calculate_score(self, lock_info):
         self.score += globals.SCORES[lock_info["lines_cleared"] - 1] * (self.level + 1)
@@ -167,12 +180,12 @@ class Game:
     # -----------------------------
     def move_down(self, from_input=False):
         moved = self.board.move_down()
-        
+
         if from_input and moved:
             self.sound.play("move")
 
-        if self.soft_drop_active == True:
-            self.gravity_time = 0        
+        if self.soft_drop_active:
+            self.gravity_time = 0
 
     def move_left(self):
         if self.board.move_left():
@@ -184,7 +197,7 @@ class Game:
 
     def hard_drop(self):
         lock_info = self.board.hard_drop()
-        self.handle_piece_lock(lock_info)  
+        self.handle_piece_lock(lock_info)
 
     def rotate_cw(self):
         if self.board.rotate_cw():
@@ -203,7 +216,9 @@ class Game:
     def on_level_change(self):
         if self.on_level_change_callback:
             self.on_level_change_callback(self.level)
-            print(f"Leveled - {self.level - 1} to {self.level} with {self.lines_cleared}")
+            print(
+                f"Leveled - {self.level - 1} to {self.level} with {self.lines_cleared}"
+            )
 
     def on_lines_change(self):
         if self.on_lines_change_callback:

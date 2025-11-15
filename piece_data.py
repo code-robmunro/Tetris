@@ -2,13 +2,13 @@ from enum import IntEnum
 import globals
 
 class PieceType(IntEnum):
-    O = 1
+    O = 1  # noqa: E741
     S = 2
     T = 3
     J = 4
     L = 5
     Z = 6
-    I = 7
+    I = 7  # noqa: E741
 
 # Sprite sheet indexing offsets
 PIECE_COLOR_OFFSETS = {

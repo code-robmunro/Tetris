@@ -1,7 +1,9 @@
-# piece_randomizer.py
-import random, time
-random.seed(time.time())
+import random
+import time
+
 from piece_data import PieceType
+
+random.seed(time.time())
 
 class PieceRandomizer:
     _instance = None  # static variable for singleton

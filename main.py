@@ -1,5 +1,4 @@
 import pygame
-import sys
 import asyncio
 import assets
 from game import Game

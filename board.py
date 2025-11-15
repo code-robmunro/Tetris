@@ -3,7 +3,6 @@ from piece import Piece, PieceState
 from piece_data import PieceType, WALL_KICKS
 import globals
 import assets
-import sprite_utils
 
 class Board:
     MAX_LOCK_RESETS = 15

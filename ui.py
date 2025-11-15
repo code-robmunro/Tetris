@@ -1,7 +1,7 @@
 import pygame
 import assets
 import globals
-from piece import Piece, PieceState
+from piece import Piece
 from piece_data import PieceType
 from piece_randomizer import PieceRandomizer
 
