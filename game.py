@@ -4,6 +4,7 @@ import sys
 import pygame
 
 import globals
+from eventbus import EventBus
 from board import Board
 from piece import Piece
 from soundmanager import SoundManager
@@ -27,14 +28,16 @@ class Game:
         self.fps_timer = 0
         self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
 
-        self.ui = UI()
+        self.event_bus = EventBus()
+
+        self.ui = UI(self.event_bus)
         self.on_level_change_callback = self.ui.handle_level_change
         self.on_lines_change_callback = self.ui.handle_lines_change
         self.on_score_change_callback = self.ui.handle_score_change
 
-        self.sound = SoundManager()
+        self.sound = SoundManager(self.event_bus)
         self.sound.play_music()
-        self.board = Board()
+        self.board = Board(self.event_bus)
 
         self.state = "PLAYING"
         self.level = 5  # 1
@@ -107,7 +110,7 @@ class Game:
                     self.rotate_cw()
                 elif event.key == pygame.K_q or event.key == pygame.K_z:
                     self.rotate_ccw()
-                elif event.key == pygame.K_LSHIFT:
+                elif event.key == pygame.K_LSHIFT or event.key == pygame.K_RSHIFT:
                     self.hold_piece()
                 elif event.key == pygame.K_p:
                     self.paused = not self.paused
@@ -163,7 +166,7 @@ class Game:
         if lock_info["lines_cleared"] > 0:
             self.sound.play("line_clear")
             self.lines_cleared += lock_info["lines_cleared"]
-            self.on_lines_change()
+            self.event_bus.emit("lines_change", self.lines_cleared)
             self.calculate_level()
             self.calculate_score(lock_info)
 
@@ -180,14 +183,14 @@ class Game:
     def calculate_level(self):
         while self.lines_cleared >= self.total_lines_for_level(self.level + 1):
             self.level += 1
-            self.on_level_change()
+            self.event_bus.emit("level_change", self.level)
             self.seconds_per_row = globals.LEVEL_SPEEDS[
                 min(self.level - 1, len(globals.LEVEL_SPEEDS) - 1)
             ]
 
     def calculate_score(self, lock_info):
         self.score += globals.SCORES[lock_info["lines_cleared"] - 1] * (self.level + 1)
-        self.on_score_change()
+        self.event_bus.emit("score_change", self.score)
 
     # -----------------------------
     # Input event handlers
@@ -222,22 +225,4 @@ class Game:
             self.sound.play("rotate")
 
     def hold_piece(self):
-        pass
-
-    # -----------------------------
-    # Callbacks
-    # -----------------------------
-    def on_level_change(self):
-        if self.on_level_change_callback:
-            self.on_level_change_callback(self.level)
-            print(
-                f"Leveled - {self.level - 1} to {self.level} with {self.lines_cleared}"
-            )
-
-    def on_lines_change(self):
-        if self.on_lines_change_callback:
-            self.on_lines_change_callback(self.lines_cleared)
-
-    def on_score_change(self):
-        if self.on_score_change_callback:
-            self.on_score_change_callback(self.score)
+        self.board.hold_piece()

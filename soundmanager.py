@@ -2,7 +2,9 @@ import globals
 import pygame
 
 class SoundManager:
-    def __init__(self):
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+        
         pygame.mixer.init()
 
         self.sounds = {

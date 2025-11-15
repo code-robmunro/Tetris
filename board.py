@@ -1,4 +1,5 @@
 import pygame
+from eventbus import EventBus
 from piece import Piece, PieceState
 from piece_data import PieceType, WALL_KICKS
 import globals
@@ -7,9 +8,11 @@ import assets
 class Board:
     MAX_LOCK_RESETS = 15
 
-    def __init__(self):
+    def __init__(self, event_bus: EventBus):
+        self.event_bus = event_bus
         self.moved_this_frame = False
         self.rotated_this_frame = False
+        self.recently_used_hold = False
 
         # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
@@ -19,6 +22,7 @@ class Board:
              globals.BOARD_HEIGHT * globals.TETRIS_BIT_24_HEIGHT)
         )
         self.current_piece = None
+        self.held_piece = None
 
         # Rotation spin bug
         # self.setup_t_or_z_spin()
@@ -126,6 +130,7 @@ class Board:
                 self.grid[bx][by] = val
 
         self.current_piece = None
+        self.recently_used_hold = False
         return self.clear_lines()
 
     def clear_lines(self):
@@ -232,6 +237,17 @@ class Board:
         self.current_piece.state = PieceState.LOCKED
         lock_info = self.lock_piece()  # capture the lines cleared / board state
         return lock_info
+
+    def hold_piece(self):
+        if not self.recently_used_hold:
+            if self.held_piece:
+                self.current_piece, self.held_piece = self.held_piece, self.current_piece
+                self.current_piece.set_default_values()
+                self.event_bus.emit("piece_held_or_swapped", self.held_piece)
+            else:
+                self.held_piece, self.current_piece = self.current_piece, None
+                self.event_bus.emit("piece_held_or_swapped", self.held_piece)
+            self.recently_used_hold = True
 
     def setup_t_or_z_spin(self):
         self.current_piece = Piece(PieceType.T)

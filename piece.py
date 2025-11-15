@@ -19,23 +19,7 @@ class Piece:
         self.piece_type = piece_type or self.randomizer.next_piece()
         self.piece_bit_size = piece_bit_size
         self.piece_sprites = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET if self.piece_bit_size == 24 else globals.TETRIS_BIT_16_SHEET, sprite_size=self.piece_bit_size)
-        self.rotation = 0
-        self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
-        self.PIECE_SHAPES = PIECE_SHAPES
-
-        # Spawn position
-        if self.piece_type.name in ("I", "O"):
-            self.x = int((globals.BOARD_WIDTH / 2) - 2)
-        else:
-            self.x = int((globals.BOARD_WIDTH / 2) - 1)
-        self.y = -2
-
-        self.last_x = self.x
-        self.last_y = self.y
-
-        self.state = PieceState.SPAWNING
-        self.lock_timer = 0
-        self.lock_resets = 0
+        self.set_default_values()
 
     def update(self, board, moved=False, rotated=False):
         """Call each frame to handle gravity, grounding, lock delay, and locking."""
@@ -87,6 +71,25 @@ class Piece:
         for x in range(len(self.shape[0])):
             for y in range(len(self.shape)):
                 yield x, y, self.shape[y][x]
+
+    def set_default_values(self):
+        self.rotation = 0
+        self.shape = PIECE_SHAPES[self.piece_type][self.rotation]
+        self.PIECE_SHAPES = PIECE_SHAPES
+
+        # Spawn position
+        if self.piece_type.name in ("I", "O"):
+            self.x = int((globals.BOARD_WIDTH / 2) - 2)
+        else:
+            self.x = int((globals.BOARD_WIDTH / 2) - 1)
+        self.y = -2
+
+        self.last_x = self.x
+        self.last_y = self.y
+
+        self.state = PieceState.SPAWNING
+        self.lock_timer = 0
+        self.lock_resets = 0
 
     def move(self, dx, dy):
         self.x += dx

@@ -9,7 +9,14 @@ class UI:
     randomizer = PieceRandomizer()
     
 
-    def __init__(self):
+    def __init__(self, event_bus):
+        self.event_bus = event_bus
+
+        self.event_bus.on("level_change", self.handle_level_change)
+        self.event_bus.on("lines_change", self.handle_lines_change)
+        self.event_bus.on("score_change", self.handle_score_change)
+        self.event_bus.on("piece_held_or_swapped", self.handle_piece_held_or_swapped)
+
         self.ui = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
         self.font_20 = pygame.font.Font(globals.FONT, 20)
         self.font_16 = pygame.font.Font(globals.FONT, 16)
@@ -18,6 +25,7 @@ class UI:
         self.current_score = 0
         self.top_score = 0
         self.next_pieces = []
+        self.held_piece = None
 
         self.paint_layout()
 
@@ -28,6 +36,7 @@ class UI:
         screen.blit(self.ui, (0, 0))
         self.paint_layout()
         self.draw_next_pieces()
+        self.draw_held_piece()
 
     def paint_layout(self):
         background = assets.load_image(globals.BACKGROUND)
@@ -107,6 +116,21 @@ class UI:
                 y = y + 22 + (50 * i)
             piece.draw(self.ui, x_offset=x, y_offset=y, use_grid=False)
 
+    def draw_held_piece(self):
+        if self.held_piece:
+            piece = Piece(self.held_piece.piece_type, piece_bit_size=16)
+            if piece.piece_type in (PieceType.S, PieceType.T, PieceType.J, PieceType.L, PieceType.Z):
+                x = globals.HELD_PIECE_BOX_RECT.centerx - 24
+                y = globals.HELD_PIECE_BOX_RECT.centery - 16
+            elif piece.piece_type == PieceType.O:
+                x = globals.HELD_PIECE_BOX_RECT.centerx - 32
+                y = globals.HELD_PIECE_BOX_RECT.centery - 32
+            else: # the PieceType is 'I'
+                x = globals.HELD_PIECE_BOX_RECT.centerx - 32
+                y = globals.HELD_PIECE_BOX_RECT.centery - 24
+
+            piece.draw(self.ui, x_offset=x, y_offset=y, use_grid=False)
+
     def handle_level_change(self, level):
         self.current_level = level
 
@@ -115,3 +139,6 @@ class UI:
 
     def handle_score_change(self, score):
         self.current_score = score
+
+    def handle_piece_held_or_swapped(self, piece: Piece):
+        self.held_piece = piece
