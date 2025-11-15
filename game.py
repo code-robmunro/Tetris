@@ -22,6 +22,9 @@ class Game:
         self.running = True
         self.delta_time = self.clock.get_time() / 1000
         self.paused = False
+        self.show_fps = False
+        self.fps_display = 60
+        self.fps_timer = 0
         self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
 
         self.ui = UI()
@@ -65,6 +68,14 @@ class Game:
                 pause_text = self.font.render("PAUSED", True, (255, 255, 0))
                 self.screen.blit(pause_text, (100, 100))
 
+            if self.fps_timer >= 1:
+                self.fps_display = round(1 / self.delta_time)
+                self.fps_timer = 0
+
+            if self.show_fps:
+                show_fps_text = self.font.render(f"FPS: {self.fps_display}", True, (255, 255, 0))
+                self.screen.blit(show_fps_text, (100, 100))
+
             pygame.display.flip()
 
             self.clock.tick(60)
@@ -101,6 +112,8 @@ class Game:
                 elif event.key == pygame.K_p:
                     self.paused = not self.paused
                     print(f"Paused: {self.paused}")
+                elif event.key == pygame.K_f:
+                    self.show_fps = not self.show_fps
                 elif event.key == pygame.K_b:
                     breakpoint()
 
@@ -110,6 +123,7 @@ class Game:
 
     def update(self):
         self.delta_time = self.clock.tick(60) / 1000
+        self.fps_timer += self.delta_time
 
         # Update gravity
         if self.soft_drop_active:
