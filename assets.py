@@ -8,13 +8,15 @@ def load_image(path, scale=None):
     if path not in _assets:
         _assets[path] = pygame.image.load(path).convert_alpha()
         if scale is not None:
-            _assets[path] = pygame.transform.scale(_assets[path], (_assets[path].get_width() * scale, _assets[path].get_height() * scale))
-    
+            _assets[path] = pygame.transform.scale(
+                _assets[path], 
+                (_assets[path].get_width() * scale, _assets[path].get_height() * scale)
+            )
     return _assets[path]
 
 def load_piece_sprites(sheet_path, num_pieces=7, sprite_size=24):
     """Return a list of piece-type surfaces, caching them in _assets."""
-    key = f"{sheet_path}_pieces"
+    key = f"{sheet_path}_pieces_{sprite_size}"
     if key not in _assets:
         sheet = load_image(sheet_path)  # reuse the existing cache
         sprites = []
@@ -25,36 +27,20 @@ def load_piece_sprites(sheet_path, num_pieces=7, sprite_size=24):
         _assets[key] = sprites
     return _assets[key]
 
-def preload():    
+def preload():
     # preload commonly used graphics
     load_image(globals.TETRIS_BIT_24_SHEET)
-
+    load_image(globals.TETRIS_BIT_16_SHEET)  # Add 16x16 sheet
     load_image(globals.BACKGROUND)
-
-    # play_area_box = load_image(globals.PLAY_AREA_BOX)
     load_image(globals.PLAY_AREA_BORDER)
-
-    # level_txt_box = load_image(globals.LEVEL_TXT_BOX)
     load_image(globals.LEVEL_TXT_BORDER)
-
-    # next_piece_box = load_image(globals.NEXT_PIECE_BOX)
     load_image(globals.NEXT_PIECE_BORDER)
-
-    # next_txt_box = load_image(globals.NEXT_TXT_BOX)
     load_image(globals.NEXT_TXT_BORDER)
-
-    # next_piece_secondary_box = load_image(globals.NEXT_PIECE_SECONDARY_BOX)
     load_image(globals.NEXT_PIECE_SECONDARY_BORDER)
-
-    # held_piece_box = load_image(globals.HELD_PIECE_BOX)
     load_image(globals.HELD_PIECE_BORDER)
-
-    # cpu_play_area_box = load_image(globals.CPU_PLAY_AREA_BOX)
+    load_image(globals.HELD_TXT_BORDER)
     load_image(globals.CPU_PLAY_AREA_BORDER)
-
     load_image(globals.CPU_AVATAR_BOX)
     load_image(globals.CPU_AVATAR_BORDER)
-    load_image(globals.CPU_AVATAR_CAT)    
-
-    # score_box = load_image(globals.SCORE_BOX)
+    load_image(globals.CPU_AVATAR_CAT)
     load_image(globals.SCORE_BORDER)

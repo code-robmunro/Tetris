@@ -16,31 +16,30 @@ assets.preload()
 
 async def main():
     clock = pygame.time.Clock()
-
+    
     while True:
         # Show menu
         menu = Menu(screen)
         menu_choice = None
-
+        
         while menu_choice is None:
             menu_choice = menu.handle_input()
             menu.draw()
             clock.tick(60)
             await asyncio.sleep(0)
-
+        
         # Handle menu choice
         if menu_choice == "EXIT":
             break
         elif menu_choice == "SINGLE_PLAYER":
             # Start single player game
-            game = Game(screen)
+            game = Game(screen, multiplayer=False)
             await game.run()
         elif menu_choice == "MULTIPLAYER":
-            # TODO: Implement multiplayer
-            print("Multiplayer not yet implemented")
-            await asyncio.sleep(1)
-            continue
-
+            # Start multiplayer game
+            game = Game(screen, multiplayer=True)
+            await game.run()
+    
     pygame.quit()
 
 if __name__ == "__main__":
