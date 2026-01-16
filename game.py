@@ -31,9 +31,9 @@ class Game:
         self.event_bus = EventBus()
 
         self.ui = UI(self.event_bus)
-        self.on_level_change_callback = self.ui.handle_level_change
-        self.on_lines_change_callback = self.ui.handle_lines_change
-        self.on_score_change_callback = self.ui.handle_score_change
+        # self.on_level_change_callback = self.ui.handle_level_change
+        # self.on_lines_change_callback = self.ui.handle_lines_change
+        # self.on_score_change_callback = self.ui.handle_score_change
 
         self.sound = SoundManager(self.event_bus)
         self.sound.play_music()
@@ -84,8 +84,6 @@ class Game:
             self.clock.tick(60)
             await asyncio.sleep(0)  # keep async flow for pygbag/browser
 
-        pygame.quit()
-        sys.exit()
 
     def handle_input(self):
         for event in pygame.event.get():
@@ -128,27 +126,34 @@ class Game:
         self.delta_time = self.clock.tick(60) / 1000
         self.fps_timer += self.delta_time
 
-        # Update gravity
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
         else:
             self.gravity_time += self.delta_time
 
-        # Move piece down based on gravity
+        # Update gravity
         while self.gravity_time >= self.seconds_per_row:
-            self.move_down(
-                from_input=self.soft_drop_active
-            )  # gravity movement, no sound
+            self.move_down(from_input=self.soft_drop_active)
             self.gravity_time -= self.seconds_per_row
 
+        # Update board (includes piece lock detection)
         lock_info = self.board.update(self.delta_time)
-        if lock_info["lines_cleared"] > 0:
+
+        # Check for line clear animation updates
+        if self.board.line_clear_animation:
+            animation_result = self.board.update_line_clear_animation(self.delta_time)
+            if animation_result and animation_result['lines_cleared'] > 0:
+                # Animation finished, now handle the cleared lines
+                self.handle_piece_lock(animation_result)
+        elif lock_info['lines_cleared'] > 0:
+            # No animation active, but lines need clearing
+            # This shouldn't happen with new system, but kept for safety
             self.handle_piece_lock(lock_info)
 
         self.ui.update()
 
-        # Spawn a new piece if needed
-        if self.board.current_piece is None:
+        # Spawn new piece if needed (but not during animation)
+        if self.board.current_piece is None and not self.board.line_clear_animation:
             self.spawn_piece()
 
     def draw(self):

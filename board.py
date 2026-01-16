@@ -14,6 +14,10 @@ class Board:
         self.rotated_this_frame = False
         self.recently_used_hold = False
 
+        self.line_clear_animation = None  # Stores animation state
+        self.animation_timer = 0
+        self.animation_duration = 0.4  # 400ms animation
+
         # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
         self.piece_bits = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET)
@@ -51,12 +55,20 @@ class Board:
         return lock_info
 
     def draw(self, screen):
+        """Draw the board with line clear animations"""
         self.play_area.fill((0, 0, 0))
+
+        # Draw normal blocks
         for x, col in enumerate(self.grid):
             for y, val in enumerate(col):
                 if val:
-                    self.draw_bit(val, x, y)
+                    # Check if this row is being animated
+                    if self.line_clear_animation and y in self.line_clear_animation['rows']:
+                        self.draw_animated_bit(val, x, y)
+                    else:
+                        self.draw_bit(val, x, y)
 
+        # Draw ghost piece
         if self.current_piece:
             ghost_offset = self.find_lowest_valid_move()
             self.current_piece.draw(self.play_area, y_offset=ghost_offset, ghost=True)
@@ -76,6 +88,31 @@ class Board:
             surf,
             (grid_x * globals.TETRIS_BIT_24_WIDTH,
              grid_y * globals.TETRIS_BIT_24_HEIGHT)
+        )
+
+    def draw_animated_bit(self, val, gridx, gridy):
+        """Draw a bit with animation effects during line clear"""
+        surf = self.piece_bits[val - 1].copy()
+        anim = self.line_clear_animation
+
+        if anim['phase'] == 0:  # Flash phase
+            # Alternate between white flash and normal every 3 frames
+            flash_cycle = int(anim['timer'] * 60) % 6  # 60 fps
+            if flash_cycle < 3:
+                # Create white flash overlay
+                white_overlay = pygame.Surface((globals.TETRIS_BIT_24_WIDTH, globals.TETRIS_BIT_24_HEIGHT))
+                white_overlay.fill((255, 255, 255))
+                surf.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_ADD)
+
+        elif anim['phase'] == 1:  # Fade phase
+            # Fade out
+            progress = (anim['timer'] - 0.2) / 0.15  # 0.0 to 1.0
+            alpha = int(255 * (1 - progress))
+            surf.set_alpha(alpha)
+
+        self.play_area.blit(
+            surf,
+            (gridx * globals.TETRIS_BIT_24_WIDTH, gridy * globals.TETRIS_BIT_24_HEIGHT)
         )
 
     # -----------------------------
@@ -134,14 +171,45 @@ class Board:
         return self.clear_lines()
 
     def clear_lines(self):
+        """Detect complete lines and start clear animation"""
         complete_lines = self.detect_complete_lines()
-        for row in complete_lines:
-            self.remove_row(row)
+        if complete_lines:
+            # Start the animation
+            self.line_clear_animation = {
+                'rows': complete_lines,
+                'phase': 0,  # 0=flash, 1=fade, 2=remove
+                'timer': 0
+            }
+            return {"lines_cleared": 0, "board_full": False}  # Don't count yet
+        return {"lines_cleared": 0, "board_full": False}
+    
+    def update_line_clear_animation(self, delta_time):
+        """Update the line clear animation state"""
+        if self.line_clear_animation is None:
+            return None
 
-        return {
-            "lines_cleared": len(complete_lines),
-            "board_full": False,
-        }
+        anim = self.line_clear_animation
+        anim['timer'] += delta_time
+
+        # Phase 0: Flash effect (0-0.2s)
+        if anim['timer'] < 0.2:
+            anim['phase'] = 0
+        # Phase 1: Fade out effect (0.2-0.35s)
+        elif anim['timer'] < 0.35:
+            anim['phase'] = 1
+        # Phase 2: Remove lines (0.35-0.4s)
+        else:
+            anim['phase'] = 2
+            # Actually remove the lines
+            for row in anim['rows']:
+                self.remove_row(row)
+
+            # Return the clear info
+            result = {"lines_cleared": len(anim['rows']), "board_full": False}
+            self.line_clear_animation = None
+            return result
+
+        return None
 
     def detect_complete_lines(self):
         complete_lines = []
