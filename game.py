@@ -8,6 +8,8 @@ from board import Board
 from piece import Piece
 from soundmanager import SoundManager
 from ui import UI
+from piece_randomizer import PieceRandomizer
+import assets
 
 class Game:
     GRAVITY_TIMER_GROWTH_FACTOR = 1.1
@@ -15,7 +17,8 @@ class Game:
     DELAYED_AUTO_SHIFT = 0.17  # Before holding L/R results in repeated movement
     SOFT_DROP_MULTIPLIER = 20
     
-    def __init__(self, screen, multiplayer=False):
+    def __init__(self, screen, mode="single"):
+        # mode can be: "single", "ai", or "multiplayer"
         self.clock = pygame.time.Clock()
         self.screen = screen
         self.running = True
@@ -24,7 +27,7 @@ class Game:
         self.show_fps = False
         self.fps_display = 60
         self.fps_timer = 0
-        self.font = pygame.font.SysFont(None, 36)  # None = default font, 36 = size
+        self.font = pygame.font.SysFont(None, 36)
         
         self.event_bus = EventBus()
         self.ui = UI(self.event_bus)
@@ -34,12 +37,42 @@ class Game:
         # Local player board
         self.board = Board(self.event_bus)
         
-        # Multiplayer setup
-        self.multiplayer = multiplayer
+        # Mode setup
+        self.mode = mode
         self.opponent_board = None
+        self.ai_opponent = None
         self.websocket = None
         
-        if self.multiplayer:
+        if self.mode == "ai":
+            # Create AI opponent
+            from opponent_board import OpponentBoard
+            from ai_opponent import AIOpponent
+            
+            self.opponent_board = OpponentBoard()
+            # Remove test pieces for AI mode
+            self.opponent_board.grid = [[0 for _ in range(self.opponent_board.height)] 
+                                         for _ in range(self.opponent_board.width)]
+            self.opponent_board.current_piece_data = None
+            
+            # Create AI with its own board (don't re-import Board)
+            ai_board = Board(self.event_bus)
+            
+            # Configure AI board for 16x16 display
+            ai_board.block_size = 16
+            ai_board.width = 10
+            ai_board.height = 20
+            ai_board.grid = [[0 for _ in range(20)] for _ in range(10)]
+            ai_board.piece_bits = assets.load_piece_sprites(globals.TETRIS_BIT_16_SHEET, sprite_size=16)
+            ai_board.play_area = pygame.Surface((160, 320))
+            
+            ai_randomizer = PieceRandomizer()
+            self.ai_opponent = AIOpponent(ai_board, ai_randomizer)
+            
+            # Spawn first piece for AI
+            ai_piece = Piece(piece_bit_size=16)
+            ai_board.place_piece(ai_piece)
+            
+        elif self.mode == "multiplayer":
             from opponent_board import OpponentBoard
             self.opponent_board = OpponentBoard()
         
@@ -65,7 +98,7 @@ class Game:
     
     async def run(self):
         # Connect to websocket if multiplayer
-        if self.multiplayer:
+        if self.mode == "multiplayer":
             await self.connect_websocket()
         
         while self.running:
@@ -89,7 +122,7 @@ class Game:
                 self.screen.blit(show_fps_text, (100, 100))
             
             # Send/receive websocket data
-            if self.multiplayer and not self.paused:
+            if self.mode == "multiplayer" and not self.paused:
                 await self.sync_network()
             
             pygame.display.flip()
@@ -108,10 +141,10 @@ class Game:
             print("Connected to game server")
         except ImportError:
             print("websockets library not installed. Run: pip install websockets")
-            # self.multiplayer = False
+            print("Continuing in multiplayer mode without network connection")
         except Exception as e:
             print(f"Failed to connect to game server: {e}")
-            # self.multiplayer = False
+            print("Continuing in multiplayer mode without network connection")
     
     async def sync_network(self):
         """Send local state and receive opponent state"""
@@ -137,7 +170,6 @@ class Game:
                 
         except Exception as e:
             print(f"Network error: {e}")
-            # Optionally disable multiplayer on persistent errors
     
     def serialize_board_state(self):
         """Convert local board to data for sending"""
@@ -155,6 +187,21 @@ class Game:
             }
         
         return data
+    
+    def sync_ai_to_display(self):
+        """Sync AI board state to opponent board display"""
+        ai_board = self.ai_opponent.board
+        self.opponent_board.grid = [col[:] for col in ai_board.grid]
+        
+        if ai_board.current_piece:
+            self.opponent_board.current_piece_data = {
+                'x': ai_board.current_piece.x,
+                'y': ai_board.current_piece.y,
+                'shape': ai_board.current_piece.shape,
+                'piece_type': int(ai_board.current_piece.piece_type)
+            }
+        else:
+            self.opponent_board.current_piece_data = None
     
     def handle_input(self):
         for event in pygame.event.get():
@@ -217,7 +264,6 @@ class Game:
                 self.handle_piece_lock(animation_result)
         elif lock_info['lines_cleared'] > 0:
             # No animation active, but lines need clearing
-            # This shouldn't happen with new system, but kept for safety
             self.handle_piece_lock(lock_info)
         
         self.ui.update()
@@ -225,13 +271,21 @@ class Game:
         # Spawn new piece if needed (but not during animation)
         if self.board.current_piece is None and not self.board.line_clear_animation:
             self.spawn_piece()
+        
+        # Update AI opponent
+        if self.mode == "ai" and self.ai_opponent:
+            self.ai_opponent.update(self.delta_time)
+            
+            # Sync AI board to opponent display
+            if self.opponent_board:
+                self.sync_ai_to_display()
     
     def draw(self):
         self.ui.draw(self.screen)
         self.board.draw(self.screen)
         
-        # Draw opponent board if multiplayer
-        if self.multiplayer and self.opponent_board:
+        # Draw opponent board if in AI or multiplayer mode
+        if self.mode in ["ai", "multiplayer"] and self.opponent_board:
             self.opponent_board.draw(self.screen)
     
     def spawn_piece(self):
@@ -254,8 +308,6 @@ class Game:
             self.spawn_piece()
     
     def total_lines_for_level(self, level):
-        # Returns cumulative total lines needed to reach the given level
-        # Level 1 → 2 requires 20 lines
         return 10 * (level * (level + 1) // 2) - 10
     
     def calculate_level(self):

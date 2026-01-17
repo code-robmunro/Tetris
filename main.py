@@ -5,9 +5,6 @@ from game import Game
 from menu import Menu
 from globals import SCREEN_WIDTH, SCREEN_HEIGHT
 
-# import ctypes
-# ctypes.windll.user32.SetProcessDPIAware()
-
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Tetris")
@@ -32,12 +29,16 @@ async def main():
         if menu_choice == "EXIT":
             break
         elif menu_choice == "SINGLE_PLAYER":
-            # Start single player game
-            game = Game(screen, multiplayer=False)
+            # Start single player gamea
+            game = Game(screen, mode="single")
+            await game.run()
+        elif menu_choice == "VS._AI":
+            # Start AI opponent game
+            game = Game(screen, mode="ai")
             await game.run()
         elif menu_choice == "MULTIPLAYER":
             # Start multiplayer game
-            game = Game(screen, multiplayer=True)
+            game = Game(screen, mode="multiplayer")
             await game.run()
     
     pygame.quit()
