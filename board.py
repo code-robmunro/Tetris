@@ -1,19 +1,21 @@
 import pygame
+
 from eventbus import EventBus
 from piece import Piece, PieceState
 from piece_data import PieceType, WALL_KICKS
 import globals
 import assets
 
+
 class Board:
     MAX_LOCK_RESETS = 15
 
-    def __init__(self, event_bus: EventBus):
+    def __init__(self, event_bus: EventBus, piece_randomizer):
         self.event_bus = event_bus
+        self.piece_randomizer = piece_randomizer
         self.moved_this_frame = False
         self.rotated_this_frame = False
         self.recently_used_hold = False
-
         self.line_clear_animation = None  # Stores animation state
         self.animation_timer = 0
         self.animation_duration = 0.4  # 400ms animation
@@ -25,6 +27,7 @@ class Board:
             (globals.BOARD_WIDTH * globals.TETRIS_BIT_24_WIDTH,
              globals.BOARD_HEIGHT * globals.TETRIS_BIT_24_HEIGHT)
         )
+
         self.current_piece = None
         self.held_piece = None
 
@@ -34,11 +37,13 @@ class Board:
     # -----------------------------
     # Update / Draw
     # -----------------------------
+
     def update(self, delta_time):
         lock_info = {
             "lines_cleared": 0,
             "board_full": False,
         }
+
         if self.current_piece:
             self.current_piece.update(
                 board=self,
@@ -51,7 +56,6 @@ class Board:
 
         self.moved_this_frame = False
         self.rotated_this_frame = False
-
         return lock_info
 
     def draw(self, screen):
@@ -79,6 +83,7 @@ class Board:
     # -----------------------------
     # Utility
     # -----------------------------
+
     def draw_bit(self, val, grid_x, grid_y, ghost=False):
         surf = self.piece_bits[val - 1]
         if ghost:
@@ -118,6 +123,7 @@ class Board:
     # -----------------------------
     # Placement / Validation
     # -----------------------------
+
     def place_piece(self, piece: Piece):
         if self.current_piece is not None:
             return
@@ -134,6 +140,7 @@ class Board:
         for cell_x, cell_y, value in piece.iter_cells():
             if value == 0:
                 continue
+
             board_x = piece.x + cell_x + dx
             board_y = piece.y + cell_y + dy
 
@@ -145,6 +152,7 @@ class Board:
                 continue  # allow above board
             if self.grid[board_x][board_y] != 0:
                 return False
+
         return True
 
     def find_lowest_valid_move(self):
@@ -157,6 +165,7 @@ class Board:
     # -----------------------------
     # Locking / Clearing
     # -----------------------------
+
     def lock_piece(self):
         for x, y, val in self.current_piece.iter_cells():
             if val == 0:
@@ -173,6 +182,7 @@ class Board:
     def clear_lines(self):
         """Detect complete lines and start clear animation"""
         complete_lines = self.detect_complete_lines()
+
         if complete_lines:
             # Start the animation
             self.line_clear_animation = {
@@ -181,8 +191,9 @@ class Board:
                 'timer': 0
             }
             return {"lines_cleared": 0, "board_full": False}  # Don't count yet
+
         return {"lines_cleared": 0, "board_full": False}
-    
+
     def update_line_clear_animation(self, delta_time):
         """Update the line clear animation state"""
         if self.line_clear_animation is None:
@@ -226,12 +237,12 @@ class Board:
     # -----------------------------
     # Movement / Rotation
     # -----------------------------
+
     def move_left(self):
         if self.can_move(-1, 0):
             self.current_piece.move(-1, 0)
             self.moved_this_frame = True
             return True
-
         return False
 
     def move_right(self):
@@ -239,7 +250,6 @@ class Board:
             self.current_piece.move(1, 0)
             self.moved_this_frame = True
             return True
-        
         return False
 
     def move_down(self):
@@ -247,7 +257,6 @@ class Board:
             self.current_piece.move(0, 1)
             self.moved_this_frame = True
             return True
-        
         return False
 
     def rotate_cw(self):
@@ -273,6 +282,7 @@ class Board:
         for dx, dy in WALL_KICKS.get(piece.piece_type, {}).get((old_rot, new_rot), [(0, 0)]):
             piece.x = old_x + dx
             piece.y = old_y + dy
+
             if self.is_position_valid(piece):
                 # Clamp bottom if necessary
                 max_y = max((cy for _, cy, val in piece.iter_cells() if val), default=0)
@@ -296,6 +306,7 @@ class Board:
     # -----------------------------
     # Hard Drop
     # -----------------------------
+
     def hard_drop(self):
         if not self.current_piece:
             return {"lines_cleared": 0, "board_full": False}
@@ -315,16 +326,15 @@ class Board:
             else:
                 self.held_piece, self.current_piece = self.current_piece, None
                 self.event_bus.emit("piece_held_or_swapped", self.held_piece)
+
             self.recently_used_hold = True
 
     def setup_t_or_z_spin(self):
-        self.current_piece = Piece(PieceType.T)
-
+        self.current_piece = Piece(PieceType.T, randomizer=self.piece_randomizer)
         self.grid[2][19] = int(PieceType.T)
         self.grid[1][18] = int(PieceType.T)
         self.grid[2][18] = int(PieceType.T)
         self.grid[2][17] = int(PieceType.T)
-
         self.grid[6][19] = int(PieceType.Z)
         self.grid[5][18] = int(PieceType.Z)
         self.grid[6][18] = int(PieceType.Z)

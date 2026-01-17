@@ -1,32 +1,24 @@
 import random
 import time
-
 from piece_data import PieceType
 
-random.seed(time.time())
-
 class PieceRandomizer:
-    _instance = None  # static variable for singleton
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._init()
-        return cls._instance
-
-    def _init(self):
+    def __init__(self, seed=None):
+        if seed is None:
+            seed = time.time()
+        self.random = random.Random(seed)
         self.bag = []
         self._refill_bag()
-
+    
     def _refill_bag(self):
         new_pieces = list(PieceType)
-        random.shuffle(new_pieces)
+        self.random.shuffle(new_pieces)
         self.bag[:0] = new_pieces
-
+    
     def next_piece(self):
         if len(self.bag) <= 5:
             self._refill_bag()
         return self.bag.pop()
-        
+    
     def next_pieces(self):
         return self.bag[-5:][::-1]

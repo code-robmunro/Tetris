@@ -3,15 +3,12 @@ import assets
 import globals
 from piece import Piece
 from piece_data import PieceType
-from piece_randomizer import PieceRandomizer
+
 
 class UI:
-    randomizer = PieceRandomizer()
-    
-
-    def __init__(self, event_bus):
+    def __init__(self, event_bus, piece_randomizer):
         self.event_bus = event_bus
-
+        self.randomizer = piece_randomizer
         self.event_bus.on("level_change", self.handle_level_change)
         self.event_bus.on("lines_change", self.handle_lines_change)
         self.event_bus.on("score_change", self.handle_score_change)
@@ -20,8 +17,9 @@ class UI:
         self.ui = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
         self.font_20 = pygame.font.Font(globals.FONT, 20)
         self.font_16 = pygame.font.Font(globals.FONT, 16)
-        self.current_level = 5 # 1
-        self.current_lines = 140 # 0
+
+        self.current_level = 5  # 1
+        self.current_lines = 140  # 0
         self.current_score = 0
         self.top_score = 0
         self.next_pieces = []
@@ -83,49 +81,56 @@ class UI:
 
         cpu_avatar_border = assets.load_image(globals.CPU_AVATAR_BORDER)
         self.ui.blit(cpu_avatar_border, globals.CPU_AVATAR_BORDER_RECT.topleft)
+
         cpu_avatar_box = assets.load_image(globals.CPU_AVATAR_BOX)
         self.ui.blit(cpu_avatar_box, globals.CPU_AVATAR_BOX_RECT.topleft)
+
         cpu_avatar = assets.load_image(globals.CPU_AVATAR_CAT)
         self.ui.blit(cpu_avatar, globals.CPU_AVATAR_CAT_RECT.topleft)
 
         score_border = assets.load_image(globals.SCORE_BORDER)
         self.ui.blit(score_border, globals.SCORE_BORDER_RECT.topleft)
         self.ui.fill((0, 0, 0), globals.SCORE_BOX_RECT)
+
         lines_txt = self.font_20.render((globals.LINES_TXT + str(self.current_lines)), True, (255, 255, 255))
         self.ui.blit(lines_txt, (560, 436))
+
         score_txt = self.font_20.render((globals.SCORE_TXT + str(self.current_score)), True, (255, 255, 255))
         self.ui.blit(score_txt, (560, 471))
+
         top_score_txt = self.font_20.render((globals.TOP_SCORE_TXT + str(self.top_score)), True, (255, 255, 255))
         self.ui.blit(top_score_txt, (560, 507))
 
     def draw_next_pieces(self):
-        # piece = Piece(self.next_pieces[0], piece_bit_size=16)
         for i, piece_type in enumerate(self.next_pieces):
-            piece = Piece(piece_type, piece_bit_size=16)
+            piece = Piece(piece_type, piece_bit_size=16, randomizer=self.randomizer)
+
             if piece.piece_type in (PieceType.S, PieceType.T, PieceType.J, PieceType.L, PieceType.Z):
                 x = globals.NEXT_PIECE_BOX_RECT.centerx - 24
                 y = globals.NEXT_PIECE_BOX_RECT.centery - 16
             elif piece.piece_type == PieceType.O:
                 x = globals.NEXT_PIECE_BOX_RECT.centerx - 32
                 y = globals.NEXT_PIECE_BOX_RECT.centery - 32
-            else: # the PieceType is 'I'
+            else:  # the PieceType is 'I'
                 x = globals.NEXT_PIECE_BOX_RECT.centerx - 32
                 y = globals.NEXT_PIECE_BOX_RECT.centery - 24
 
             if i > 0:
                 y = y + 22 + (50 * i)
+
             piece.draw(self.ui, x_offset=x, y_offset=y, use_grid=False)
 
     def draw_held_piece(self):
         if self.held_piece:
-            piece = Piece(self.held_piece.piece_type, piece_bit_size=16)
+            piece = Piece(self.held_piece.piece_type, piece_bit_size=16, randomizer=self.randomizer)
+
             if piece.piece_type in (PieceType.S, PieceType.T, PieceType.J, PieceType.L, PieceType.Z):
                 x = globals.HELD_PIECE_BOX_RECT.centerx - 24
                 y = globals.HELD_PIECE_BOX_RECT.centery - 16
             elif piece.piece_type == PieceType.O:
                 x = globals.HELD_PIECE_BOX_RECT.centerx - 32
                 y = globals.HELD_PIECE_BOX_RECT.centery - 32
-            else: # the PieceType is 'I'
+            else:  # the PieceType is 'I'
                 x = globals.HELD_PIECE_BOX_RECT.centerx - 32
                 y = globals.HELD_PIECE_BOX_RECT.centery - 24
 

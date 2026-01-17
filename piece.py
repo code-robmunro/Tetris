@@ -4,21 +4,26 @@ import globals
 import assets
 from enum import Enum, auto
 
+
 class PieceState(Enum):
     SPAWNING = auto()
     FALLING = auto()
     GROUNDED = auto()
     LOCKED = auto()
 
+
 class Piece:
-    randomizer = PieceRandomizer()
     MAX_LOCK_RESETS = 15
     LOCK_DELAY_FRAMES = 30  # ~0.5 sec at 60fps
 
-    def __init__(self, piece_type=None, piece_bit_size=24):
+    def __init__(self, piece_type=None, piece_bit_size=24, randomizer=None):
+        self.randomizer = randomizer if randomizer else PieceRandomizer()
         self.piece_type = piece_type or self.randomizer.next_piece()
         self.piece_bit_size = piece_bit_size
-        self.piece_sprites = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET if self.piece_bit_size == 24 else globals.TETRIS_BIT_16_SHEET, sprite_size=self.piece_bit_size)
+        self.piece_sprites = assets.load_piece_sprites(
+            globals.TETRIS_BIT_24_SHEET if self.piece_bit_size == 24 else globals.TETRIS_BIT_16_SHEET,
+            sprite_size=self.piece_bit_size
+        )
         self.set_default_values()
 
     def update(self, board, moved=False, rotated=False):
@@ -82,11 +87,10 @@ class Piece:
             self.x = int((globals.BOARD_WIDTH / 2) - 2)
         else:
             self.x = int((globals.BOARD_WIDTH / 2) - 1)
-        self.y = -2
 
+        self.y = -2
         self.last_x = self.x
         self.last_y = self.y
-
         self.state = PieceState.SPAWNING
         self.lock_timer = 0
         self.lock_resets = 0
@@ -106,16 +110,19 @@ class Piece:
     # -----------------------------
     # Gravity / Lock Helpers
     # -----------------------------
+
     def can_move_down(self, board):
         for x, y, val in self.iter_cells():
             if val == 0:
                 continue
             bx = self.x + x
             by = self.y + y + 1
+
             if by >= globals.BOARD_HEIGHT:
                 return False
             if by >= 0 and board.grid[bx][by] != 0:
                 return False
+
         return True
 
     def is_grounded(self, board):
@@ -124,11 +131,14 @@ class Piece:
             for y in reversed(range(len(self.shape))):
                 if self.shape[y][x] == 0:
                     continue
+
                 bx = self.x + x
                 by = self.y + y + 1
+
                 if by >= globals.BOARD_HEIGHT:
                     return True
                 if by >= 0 and board.grid[bx][by] != 0:
                     return True
                 break
+
         return False
