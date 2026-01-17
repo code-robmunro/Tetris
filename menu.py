@@ -6,10 +6,12 @@ class Menu:
         self.screen = screen
         self.font_large = pygame.font.Font(globals.FONT, 48)
         self.font_medium = pygame.font.Font(globals.FONT, 32)
+        self.font_small = pygame.font.Font(globals.FONT, 18)
+        self.font_tiny = pygame.font.Font(globals.FONT, 14)
         self.selected_index = 0
         self.options = ["Single Player", "Vs. AI", "Multiplayer", "Exit"]
         self.running = True
-    
+
     def handle_input(self):
         """Handle menu navigation input"""
         for event in pygame.event.get():
@@ -25,21 +27,21 @@ class Menu:
                 elif event.key == pygame.K_ESCAPE:
                     return "EXIT"
         return None
-    
+
     def draw(self):
         """Draw the menu"""
         # Fill background with black
         self.screen.fill((0, 0, 0))
-        
+
         # Draw title
         title_text = self.font_large.render("TETRIS", True, (100, 200, 255))
-        title_rect = title_text.get_rect(center=(globals.SCREEN_WIDTH // 2, 150))
+        title_rect = title_text.get_rect(center=(globals.SCREEN_WIDTH // 2, 100))
         self.screen.blit(title_text, title_rect)
-        
+
         # Draw menu options
-        start_y = 280
-        spacing = 70
-        
+        start_y = 200
+        spacing = 60
+
         for i, option in enumerate(self.options):
             # Highlight selected option
             if i == self.selected_index:
@@ -48,15 +50,47 @@ class Menu:
             else:
                 color = (255, 255, 255)  # White for unselected
                 prefix = "  "
-            
+
             text = self.font_medium.render(f"{prefix}{option}", True, color)
             text_rect = text.get_rect(center=(globals.SCREEN_WIDTH // 2, start_y + i * spacing))
             self.screen.blit(text, text_rect)
+
+        # Draw navigation instructions
+        nav_y = 430
+        nav_text = self.font_small.render("↑↓ / W S - Navigate    Enter / Space - Select    ESC - Exit", True, (150, 150, 150))
+        nav_rect = nav_text.get_rect(center=(globals.SCREEN_WIDTH // 2, nav_y))
+        self.screen.blit(nav_text, nav_rect)
+
+        # Draw gameplay controls header
+        controls_header = self.font_small.render("GAMEPLAY CONTROLS:", True, (100, 200, 255))
+        controls_header_rect = controls_header.get_rect(center=(globals.SCREEN_WIDTH // 2, nav_y + 35))
+        self.screen.blit(controls_header, controls_header_rect)
+
+        # Draw gameplay controls in two columns
+        controls_left = [
+            "← → / A D - Move",
+            "↑ / W E - Rotate CW",
+            "Q Z - Rotate CCW"
+        ]
         
-        # Draw instructions
-        small_font = pygame.font.Font(globals.FONT, 16)
-        instructions = small_font.render("Use Arrow Keys / WASD to navigate, Enter to select", True, (150, 150, 150))
-        instructions_rect = instructions.get_rect(center=(globals.SCREEN_WIDTH // 2, 550))
-        self.screen.blit(instructions, instructions_rect)
-        
+        controls_right = [
+            "↓ / S - Soft Drop",
+            "Space - Hard Drop",
+            "Shift - Hold Piece"
+        ]
+
+        left_x = globals.SCREEN_WIDTH // 2 - 150
+        right_x = globals.SCREEN_WIDTH // 2 + 150
+        controls_start_y = nav_y + 60
+
+        for i, control in enumerate(controls_left):
+            text = self.font_tiny.render(control, True, (200, 200, 200))
+            text_rect = text.get_rect(center=(left_x, controls_start_y + i * 20))
+            self.screen.blit(text, text_rect)
+
+        for i, control in enumerate(controls_right):
+            text = self.font_tiny.render(control, True, (200, 200, 200))
+            text_rect = text.get_rect(center=(right_x, controls_start_y + i * 20))
+            self.screen.blit(text, text_rect)
+
         pygame.display.flip()
