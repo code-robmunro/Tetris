@@ -302,11 +302,10 @@ class Game:
     def handle_piece_lock(self, lock_info):
         if lock_info["lines_cleared"] > 0:
             self.sound.play("line_clear")
-
-        self.lines_cleared += lock_info["lines_cleared"]
-        self.event_bus.emit("lines_change", self.lines_cleared)
-        self.calculate_level()
-        self.calculate_score(lock_info)
+            self.lines_cleared += lock_info["lines_cleared"]
+            self.event_bus.emit("lines_change", self.lines_cleared)
+            self.calculate_level()
+            self.calculate_score(lock_info)
 
         if lock_info["board_full"]:
             self.state = "GAME_OVER"
