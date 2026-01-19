@@ -231,120 +231,65 @@ class Game:
                 url = "wss://snake-customize-contributing-allowed.trycloudflare.com"
                 platform.window.console.log(f"[Browser] Connecting to {url}...")
 
-                # Create a simple WebSocket wrapper for browser
+                # Set up WebSocket entirely in JavaScript
+                platform.window.eval(f"""
+                    window.tetrisMessages = [];
+                    window.tetrisConnected = false;
+
+                    window.tetrisWS = new WebSocket('{url}');
+
+                    window.tetrisWS.onopen = function(event) {{
+                        console.log('[JS] WebSocket connected');
+                        window.tetrisConnected = true;
+                    }};
+
+                    window.tetrisWS.onmessage = function(event) {{
+                        console.log('[JS] Received: ' + event.data);
+                        window.tetrisMessages.push(event.data);
+                    }};
+
+                    window.tetrisWS.onerror = function(error) {{
+                        console.log('[JS] WebSocket error:', error);
+                    }};
+
+                    window.tetrisWS.onclose = function(event) {{
+                        console.log('[JS] WebSocket closed');
+                        window.tetrisConnected = false;
+                    }};
+                """)
+
+                # Wait for connection
+                max_wait = 50
+                wait_count = 0
+                while not platform.window.tetrisConnected and wait_count < max_wait:
+                    await asyncio.sleep(0.1)
+                    wait_count += 1
+
+                if not platform.window.tetrisConnected:
+                    platform.window.console.log("[Browser] Failed to connect")
+                    return
+
+                platform.window.console.log("[Browser] Connected successfully")
+
+                # Minimal Python wrapper
                 class BrowserWebSocket:
-                    def __init__(self, url):
-                        self.url = url
-                        self.ws = None
-                        self.messages = []
-                        self.message_handlers_set = False
-
-                    def setup_handlers(self):
-                        """Set up WebSocket event handlers using pure JavaScript"""
-                        import platform
-
-                        try:
-                            platform.window.console.log("[DEBUG] setup_handlers called")
-
-                            # Create global message queue if it doesn't exist
-                            platform.window.eval("""
-                                if (!window.tetrisMessages) {
-                                    window.tetrisMessages = [];
-                                    console.log('[DEBUG] Created tetrisMessages array');
-                                }
-                            """)
-
-                            # Get reference to the WebSocket object
-                            # Store it in a global variable for the handlers to access
-                            platform.window.tetrisWS = self.ws
-
-                            # Set up event handlers using pure JavaScript
-                            platform.window.eval("""
-                                console.log('[DEBUG] Setting up WebSocket handlers...');
-
-                                window.tetrisWS.onopen = function(event) {
-                                    console.log('[DEBUG] WebSocket opened!');
-                                };
-
-                                window.tetrisWS.onmessage = function(event) {
-                                    console.log('[DEBUG] Received message: ' + event.data);
-                                    window.tetrisMessages.push(event.data);
-                                };
-
-                                window.tetrisWS.onerror = function(error) {
-                                    console.log('[DEBUG] WebSocket error: ' + error);
-                                };
-
-                                window.tetrisWS.onclose = function(event) {
-                                    console.log('[DEBUG] WebSocket closed');
-                                };
-
-                                console.log('[DEBUG] Handlers installed');
-                            """)
-
-                            self.message_handlers_set = True
-                            platform.window.console.log("[DEBUG] setup_handlers complete")
-                        except Exception as e:
-                            platform.window.console.log(f"[DEBUG] Exception in setup_handlers: {str(e)}")
-
-                    async def connect(self):
-                        # Use platform.window.WebSocket for browser
-                        import platform
-                        platform.window.console.log("[DEBUG] Creating WebSocket object")
-
-                        try:
-                            # Create WebSocket using JavaScript 'new' operator
-                            # Try method 1: js module
-                            try:
-                                import js
-                                self.ws = js.WebSocket.new(self.url)
-                                platform.window.console.log("[DEBUG] Method 1 (js.WebSocket.new) succeeded")
-                            except:
-                                # Try method 2: eval with new
-                                platform.window.console.log("[DEBUG] Method 1 failed, trying eval...")
-                                self.ws = platform.window.eval(f"new WebSocket('{self.url}')")
-                                platform.window.console.log("[DEBUG] Method 2 (eval) succeeded")
-                        except Exception as e:
-                            platform.window.console.log(f"[DEBUG] All WebSocket creation methods failed: {e}")
-                            raise
-
-                        platform.window.console.log(f"[DEBUG] WebSocket created, readyState: {self.ws.readyState}")
-
-                        # Set up event handlers
-                        self.setup_handlers()
-
-                        # Wait for connection to open
-                        max_wait = 50  # 5 seconds
-                        wait_count = 0
-                        while self.ws.readyState == 0 and wait_count < max_wait:  # CONNECTING
-                            await asyncio.sleep(0.1)
-                            wait_count += 1
-
-                        platform.window.console.log(f"[DEBUG] After wait, readyState: {self.ws.readyState}")
-
-                        if self.ws.readyState != 1:  # Not OPEN
-                            raise ConnectionError(f"WebSocket failed to connect, readyState: {self.ws.readyState}")
-
-                        return self
-
                     async def recv(self):
                         import platform
-                        # Read from the global JavaScript message queue
                         while platform.window.tetrisMessages.length == 0:
                             await asyncio.sleep(0.01)
-                        # Shift removes and returns first element
                         return platform.window.tetrisMessages.shift()
 
                     async def send(self, data):
-                        self.ws.send(data)
+                        import platform
+                        platform.window.tetrisWS.send(data)
 
                     async def close(self):
-                        if self.ws:
-                            self.ws.close()
+                        import platform
+                        if platform.window.tetrisWS:
+                            platform.window.tetrisWS.close()
 
-                ws_wrapper = BrowserWebSocket(url)
-                self.websocket = await ws_wrapper.connect()
-                platform.window.console.log(f"[Browser] Connected to {url}")
+                self.websocket = BrowserWebSocket()
+                platform.window.console.log("[Browser] Wrapper created")
 
             else:
                 # Desktop: Use standard websockets library
