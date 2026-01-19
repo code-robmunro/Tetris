@@ -88,8 +88,8 @@ class Game:
             self.opponent_board = OpponentBoard()
 
         self.state = "PLAYING"
-        self.level = 5  # 1
-        self.lines_cleared = 140  # 0
+        self.level = 5
+        self.lines_cleared = 140
         self.score = 0
 
         self.spawn_piece()
@@ -242,6 +242,7 @@ class Game:
         if self.state == "GAME_OVER" and not self.game_over_notified:
             if self.mode == "multiplayer" and self.websocket:
                 try:
+                    print(f"[DEBUG] Sending game_over message to opponent")
                     await self.websocket.send(json.dumps({
                         "type": "game_over",
                         "timestamp": pygame.time.get_ticks()
@@ -405,6 +406,7 @@ class Game:
 
     def handle_piece_lock(self, lock_info):
         if lock_info["lines_cleared"] > 0:
+            print(f"[DEBUG] Cleared {lock_info['lines_cleared']} lines! Total now: {self.lines_cleared} -> {self.lines_cleared + lock_info['lines_cleared']}")
             self.sound.play("line_clear")
             self.lines_cleared += lock_info["lines_cleared"]
             self.event_bus.emit("lines_change", self.lines_cleared)
@@ -412,11 +414,11 @@ class Game:
             self.calculate_score(lock_info)
 
         if lock_info["board_full"]:
+            print(f"[DEBUG] GAME OVER: Board is full (lock_info says so)")
             self.state = "GAME_OVER"
             # Set flag to notify in async context
             self.game_over_notified = False
-        else:
-            self.spawn_piece()
+        # Don't spawn piece here - let the main update loop handle it at line 357-358
 
     def total_lines_for_level(self, level):
         return 10 * (level * (level + 1) // 2) - 10

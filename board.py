@@ -126,9 +126,12 @@ class Board:
 
     def place_piece(self, piece: Piece):
         if self.current_piece is not None:
-            return
+            print(f"[DEBUG] place_piece FAILED: current_piece is not None! current_piece={self.current_piece.piece_type if self.current_piece else None}")
+            return False  # Explicitly return False instead of None
         self.current_piece = piece
-        return self.is_position_valid()
+        is_valid = self.is_position_valid()
+        print(f"[DEBUG] place_piece: Placing {piece.piece_type} at ({piece.x}, {piece.y}), valid={is_valid}")
+        return is_valid
 
     def can_move(self, dx, dy):
         return self.is_position_valid(self.current_piece, dx, dy)
@@ -167,6 +170,7 @@ class Board:
     # -----------------------------
 
     def lock_piece(self):
+        locked_piece_type = self.current_piece.piece_type
         for x, y, val in self.current_piece.iter_cells():
             if val == 0:
                 continue
@@ -176,6 +180,7 @@ class Board:
                 self.grid[bx][by] = val
 
         self.current_piece = None
+        print(f"[DEBUG] lock_piece: Locked {locked_piece_type}, set current_piece to None")
         self.recently_used_hold = False
         return self.clear_lines()
 
@@ -211,6 +216,10 @@ class Board:
         # Phase 2: Remove lines (0.35-0.4s)
         else:
             anim['phase'] = 2
+            # Actually remove the lines (from bottom to top to preserve indices)
+            # for row in sorted(anim['rows'], reverse=True):
+            #     self.remove_row(row)
+
             # Actually remove the lines
             for row in anim['rows']:
                 self.remove_row(row)
@@ -239,6 +248,8 @@ class Board:
     # -----------------------------
 
     def move_left(self):
+        if not self.current_piece:
+            return False
         if self.can_move(-1, 0):
             self.current_piece.move(-1, 0)
             self.moved_this_frame = True
@@ -246,6 +257,8 @@ class Board:
         return False
 
     def move_right(self):
+        if not self.current_piece:
+            return False
         if self.can_move(1, 0):
             self.current_piece.move(1, 0)
             self.moved_this_frame = True
@@ -253,6 +266,8 @@ class Board:
         return False
 
     def move_down(self):
+        if not self.current_piece:
+            return False
         if self.can_move(0, 1):
             self.current_piece.move(0, 1)
             self.moved_this_frame = True
@@ -266,6 +281,8 @@ class Board:
         return self._rotate(False)
 
     def _rotate(self, clockwise=True):
+        if not self.current_piece:
+            return False
         piece = self.current_piece
         old_rot = piece.rotation
         old_x, old_y = piece.x, piece.y
