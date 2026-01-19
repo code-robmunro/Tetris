@@ -240,44 +240,52 @@ class Game:
                         self.message_handlers_set = False
 
                     def setup_handlers(self):
-                        """Set up WebSocket event handlers using JavaScript"""
+                        """Set up WebSocket event handlers using pure JavaScript"""
                         import platform
 
-                        platform.window.console.log("[DEBUG] setup_handlers called")
-
-                        # Create a global message queue
-                        platform.window.tetrisMessages = platform.window.Array.new()
-                        platform.window.console.log("[DEBUG] Created tetrisMessages array")
-
-                        # Store WebSocket reference globally so handlers can access it
-                        ws_ref = self.ws
-
-                        # Set handlers using direct assignment with JavaScript strings
                         try:
-                            # Use createElement trick to run JavaScript
-                            platform.window.eval(f"""
-                                window._tempWS = arguments[0];
-                                window._tempWS.onopen = function(e) {{
-                                    console.log('[DEBUG] WebSocket opened!');
-                                }};
-                                window._tempWS.onerror = function(e) {{
-                                    console.log('[DEBUG] WebSocket error:', e);
-                                }};
-                                window._tempWS.onmessage = function(e) {{
-                                    console.log('[DEBUG] Received message:', e.data);
-                                    window.tetrisMessages.push(e.data);
-                                }};
-                                delete window._tempWS;
-                            """, ws_ref)
-                            platform.window.console.log("[DEBUG] JavaScript handlers set via eval")
-                        except Exception as e:
-                            platform.window.console.log(f"[DEBUG] Eval failed: {e}")
-                            # Fallback: try direct property assignment
-                            # This might not work but let's try
-                            self.ws.onmessage = lambda e: platform.window.tetrisMessages.push(e.data)
-                            platform.window.console.log("[DEBUG] Set handler via direct assignment")
+                            platform.window.console.log("[DEBUG] setup_handlers called")
 
-                        self.message_handlers_set = True
+                            # Create global message queue if it doesn't exist
+                            platform.window.eval("""
+                                if (!window.tetrisMessages) {
+                                    window.tetrisMessages = [];
+                                    console.log('[DEBUG] Created tetrisMessages array');
+                                }
+                            """)
+
+                            # Get reference to the WebSocket object
+                            # Store it in a global variable for the handlers to access
+                            platform.window.tetrisWS = self.ws
+
+                            # Set up event handlers using pure JavaScript
+                            platform.window.eval("""
+                                console.log('[DEBUG] Setting up WebSocket handlers...');
+
+                                window.tetrisWS.onopen = function(event) {
+                                    console.log('[DEBUG] WebSocket opened!');
+                                };
+
+                                window.tetrisWS.onmessage = function(event) {
+                                    console.log('[DEBUG] Received message: ' + event.data);
+                                    window.tetrisMessages.push(event.data);
+                                };
+
+                                window.tetrisWS.onerror = function(error) {
+                                    console.log('[DEBUG] WebSocket error: ' + error);
+                                };
+
+                                window.tetrisWS.onclose = function(event) {
+                                    console.log('[DEBUG] WebSocket closed');
+                                };
+
+                                console.log('[DEBUG] Handlers installed');
+                            """)
+
+                            self.message_handlers_set = True
+                            platform.window.console.log("[DEBUG] setup_handlers complete")
+                        except Exception as e:
+                            platform.window.console.log(f"[DEBUG] Exception in setup_handlers: {str(e)}")
 
                     async def connect(self):
                         # Use platform.window.WebSocket for browser
