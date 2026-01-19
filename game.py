@@ -160,33 +160,90 @@ class Game:
     async def connect_websocket(self):
         """Establish websocket connection and wait for game start"""
         try:
-            import websockets
+            # Detect if running in browser (Pygbag/WASM)
+            import sys
+            is_browser = sys.platform == "emscripten"
 
-            # Try localhost first (for local play), then fallback to tunnel
-            server_urls = [
-                "ws://localhost:8765",  # For local play
-                "ws://75.172.7.65:8765", # Direct IP (only works with non-HTTPS clients)
-                "wss://snake-customize-contributing-allowed.trycloudflare.com"
-            ]
+            if is_browser:
+                # Use Pygbag's platform-specific WebSocket
+                import platform
+                print("[Browser] Using Pygbag WebSocket")
 
-            connected = False
-            for url in server_urls:
-                try:
-                    print(f"Attempting to connect to {url}...")
-                    self.websocket = await asyncio.wait_for(
-                        websockets.connect(url),
-                        timeout=1.0
-                    )
-                    print(f"Connected to game server at {url}")
-                    connected = True
-                    break
-                except (asyncio.TimeoutError, ConnectionRefusedError, OSError) as e:
-                    print(f"Failed to connect to {url}: {e}")
-                    continue
+                # For Pygbag, only try the secure tunnel URL
+                url = "wss://snake-customize-contributing-allowed.trycloudflare.com"
+                print(f"[Browser] Connecting to {url}...")
 
-            if not connected:
-                print("Could not connect to any game server")
-                return
+                # Create a simple WebSocket wrapper for browser
+                class BrowserWebSocket:
+                    def __init__(self, url):
+                        self.url = url
+                        self.ws = None
+                        self.messages = []
+
+                    async def connect(self):
+                        # Use platform.window.WebSocket for browser
+                        import platform
+                        self.ws = platform.window.WebSocket.new(self.url)
+
+                        # Wait for connection to open
+                        while self.ws.readyState == 0:  # CONNECTING
+                            await asyncio.sleep(0.1)
+
+                        if self.ws.readyState != 1:  # Not OPEN
+                            raise ConnectionError("WebSocket failed to connect")
+
+                        # Set up message handler
+                        def on_message(event):
+                            self.messages.append(event.data)
+                        self.ws.onmessage = on_message
+
+                        return self
+
+                    async def recv(self):
+                        while not self.messages:
+                            await asyncio.sleep(0.01)
+                        return self.messages.pop(0)
+
+                    async def send(self, data):
+                        self.ws.send(data)
+
+                    async def close(self):
+                        if self.ws:
+                            self.ws.close()
+
+                ws_wrapper = BrowserWebSocket(url)
+                self.websocket = await ws_wrapper.connect()
+                print(f"[Browser] Connected to {url}")
+
+            else:
+                # Desktop: Use standard websockets library
+                import websockets
+                print("[Desktop] Using standard websockets")
+
+                server_urls = [
+                    "ws://localhost:8765",  # For local play
+                    "ws://75.172.7.65:8765", # Direct IP (only works with non-HTTPS clients)
+                    "wss://snake-customize-contributing-allowed.trycloudflare.com"
+                ]
+
+                connected = False
+                for url in server_urls:
+                    try:
+                        print(f"Attempting to connect to {url}...")
+                        self.websocket = await asyncio.wait_for(
+                            websockets.connect(url),
+                            timeout=1.0
+                        )
+                        print(f"Connected to game server at {url}")
+                        connected = True
+                        break
+                    except (asyncio.TimeoutError, ConnectionRefusedError, OSError) as e:
+                        print(f"Failed to connect to {url}: {e}")
+                        continue
+
+                if not connected:
+                    print("Could not connect to any game server")
+                    return
 
             # Wait for game_start message from server
             message = await self.websocket.recv()
