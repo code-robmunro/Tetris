@@ -194,19 +194,39 @@ class Game:
                     async def connect(self):
                         # Use platform.window.WebSocket for browser
                         import platform
+                        platform.window.console.log("[DEBUG] Creating WebSocket object")
+
+                        # Create WebSocket (correct syntax for browser)
                         self.ws = platform.window.WebSocket.new(self.url)
 
+                        platform.window.console.log(f"[DEBUG] WebSocket created, readyState: {self.ws.readyState}")
+
+                        # Set up event handlers before waiting
+                        def on_open(event):
+                            platform.window.console.log("[DEBUG] WebSocket opened!")
+
+                        def on_error(event):
+                            platform.window.console.log(f"[DEBUG] WebSocket error: {event}")
+
+                        def on_message(event):
+                            platform.window.console.log(f"[DEBUG] Received message: {event.data}")
+                            self.messages.append(event.data)
+
+                        self.ws.onopen = on_open
+                        self.ws.onerror = on_error
+                        self.ws.onmessage = on_message
+
                         # Wait for connection to open
-                        while self.ws.readyState == 0:  # CONNECTING
+                        max_wait = 50  # 5 seconds
+                        wait_count = 0
+                        while self.ws.readyState == 0 and wait_count < max_wait:  # CONNECTING
                             await asyncio.sleep(0.1)
+                            wait_count += 1
+
+                        platform.window.console.log(f"[DEBUG] After wait, readyState: {self.ws.readyState}")
 
                         if self.ws.readyState != 1:  # Not OPEN
-                            raise ConnectionError("WebSocket failed to connect")
-
-                        # Set up message handler
-                        def on_message(event):
-                            self.messages.append(event.data)
-                        self.ws.onmessage = on_message
+                            raise ConnectionError(f"WebSocket failed to connect, readyState: {self.ws.readyState}")
 
                         return self
 
