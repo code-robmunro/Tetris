@@ -243,8 +243,10 @@ class Game:
                         """Set up WebSocket event handlers - needs to persist after connect()"""
                         import platform
 
-                        # Capture self in closures
-                        messages_list = self.messages
+                        platform.window.console.log("[DEBUG] setup_handlers called")
+
+                        # Use a reference that won't change
+                        ws_wrapper = self
 
                         def on_open(event):
                             platform.window.console.log("[DEBUG] WebSocket opened!")
@@ -254,11 +256,13 @@ class Game:
 
                         def on_message(event):
                             platform.window.console.log(f"[DEBUG] Received message: {event.data}")
-                            messages_list.append(event.data)
+                            ws_wrapper.messages.append(event.data)
 
                         self.ws.onopen = on_open
                         self.ws.onerror = on_error
                         self.ws.onmessage = on_message
+
+                        platform.window.console.log(f"[DEBUG] Handlers set: onopen={self.ws.onopen}, onmessage={self.ws.onmessage}")
                         self.message_handlers_set = True
 
                     async def connect(self):
