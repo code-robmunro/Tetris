@@ -108,8 +108,17 @@ class Game:
         self.soft_drop_active = False
 
     async def run(self):
+        # Debug: Log mode
+        import sys
+        if sys.platform == "emscripten":
+            import platform
+            platform.window.console.log(f"[DEBUG] Game mode: {self.mode}")
+
         # Connect to websocket if multiplayer
         if self.mode == "multiplayer":
+            if sys.platform == "emscripten":
+                import platform
+                platform.window.console.log("[DEBUG] Calling connect_websocket()")
             await self.connect_websocket()
 
             # Wait for game to start
@@ -167,11 +176,13 @@ class Game:
             if is_browser:
                 # Use Pygbag's platform-specific WebSocket
                 import platform
-                print("[Browser] Using Pygbag WebSocket")
+
+                # Log to browser console
+                platform.window.console.log("[Browser] Using Pygbag WebSocket")
 
                 # For Pygbag, only try the secure tunnel URL
                 url = "wss://snake-customize-contributing-allowed.trycloudflare.com"
-                print(f"[Browser] Connecting to {url}...")
+                platform.window.console.log(f"[Browser] Connecting to {url}...")
 
                 # Create a simple WebSocket wrapper for browser
                 class BrowserWebSocket:
@@ -213,7 +224,7 @@ class Game:
 
                 ws_wrapper = BrowserWebSocket(url)
                 self.websocket = await ws_wrapper.connect()
-                print(f"[Browser] Connected to {url}")
+                platform.window.console.log(f"[Browser] Connected to {url}")
 
             else:
                 # Desktop: Use standard websockets library
