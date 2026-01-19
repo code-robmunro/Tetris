@@ -161,8 +161,31 @@ class Game:
         """Establish websocket connection and wait for game start"""
         try:
             import websockets
-            self.websocket = await websockets.connect("ws://localhost:8765")
-            print("Connected to game server")
+
+            # Try localhost first (for local play), then fallback to external IP
+            server_urls = [
+                "ws://localhost:8765",
+                "ws://75.172.7.65:8765"
+            ]
+
+            connected = False
+            for url in server_urls:
+                try:
+                    print(f"Attempting to connect to {url}...")
+                    self.websocket = await asyncio.wait_for(
+                        websockets.connect(url),
+                        timeout=1.0
+                    )
+                    print(f"Connected to game server at {url}")
+                    connected = True
+                    break
+                except (asyncio.TimeoutError, ConnectionRefusedError, OSError) as e:
+                    print(f"Failed to connect to {url}: {e}")
+                    continue
+
+            if not connected:
+                print("Could not connect to any game server")
+                return
 
             # Wait for game_start message from server
             message = await self.websocket.recv()
