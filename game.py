@@ -323,18 +323,17 @@ class Game:
                     print("Could not connect to any game server")
                     return
 
-            # Wait for game_start message from server
+            # Wait for initial message from server (either "waiting" or "game_start")
             message = await self.websocket.recv()
             data = json.loads(message)
 
             if data.get("type") == "waiting":
                 print("Waiting for opponent to connect...")
                 self.waiting_for_opponent = True
-                # Wait for game_start
-                message = await self.websocket.recv()
-                data = json.loads(message)
+                # DON'T block here - let the waiting screen loop handle the game_start message
 
-            if data.get("type") == "game_start":
+            elif data.get("type") == "game_start":
+                # Second player gets game_start immediately
                 self.game_seed = data.get("seed")
                 self.player_role = data.get("role")
                 print(f"Game starting! You are {self.player_role}")
