@@ -197,11 +197,19 @@ class Game:
                         platform.window.console.log("[DEBUG] Creating WebSocket object")
 
                         try:
-                            # Create WebSocket - direct constructor call
-                            self.ws = platform.window.WebSocket(self.url)
-                            platform.window.console.log("[DEBUG] WebSocket constructor succeeded")
+                            # Create WebSocket using JavaScript 'new' operator
+                            # Try method 1: js module
+                            try:
+                                import js
+                                self.ws = js.WebSocket.new(self.url)
+                                platform.window.console.log("[DEBUG] Method 1 (js.WebSocket.new) succeeded")
+                            except:
+                                # Try method 2: eval with new
+                                platform.window.console.log("[DEBUG] Method 1 failed, trying eval...")
+                                self.ws = platform.window.eval(f"new WebSocket('{self.url}')")
+                                platform.window.console.log("[DEBUG] Method 2 (eval) succeeded")
                         except Exception as e:
-                            platform.window.console.log(f"[DEBUG] WebSocket constructor failed: {e}")
+                            platform.window.console.log(f"[DEBUG] All WebSocket creation methods failed: {e}")
                             raise
 
                         platform.window.console.log(f"[DEBUG] WebSocket created, readyState: {self.ws.readyState}")
