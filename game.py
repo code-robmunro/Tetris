@@ -240,29 +240,34 @@ class Game:
                         self.message_handlers_set = False
 
                     def setup_handlers(self):
-                        """Set up WebSocket event handlers - needs to persist after connect()"""
+                        """Set up WebSocket event handlers using JavaScript eval"""
                         import platform
 
                         platform.window.console.log("[DEBUG] setup_handlers called")
 
-                        # Use a reference that won't change
-                        ws_wrapper = self
+                        # Store reference to messages array in window for JavaScript to access
+                        # Create a global message queue
+                        platform.window.eval("""
+                            window.tetrisMessages = [];
+                        """)
 
-                        def on_open(event):
-                            platform.window.console.log("[DEBUG] WebSocket opened!")
+                        # Set handlers using JavaScript
+                        platform.window.eval("""
+                            (function(ws) {
+                                ws.onopen = function(event) {
+                                    console.log('[DEBUG] WebSocket opened!');
+                                };
+                                ws.onerror = function(event) {
+                                    console.log('[DEBUG] WebSocket error:', event);
+                                };
+                                ws.onmessage = function(event) {
+                                    console.log('[DEBUG] Received message:', event.data);
+                                    window.tetrisMessages.push(event.data);
+                                };
+                            })(arguments[0]);
+                        """, self.ws)
 
-                        def on_error(event):
-                            platform.window.console.log(f"[DEBUG] WebSocket error: {event}")
-
-                        def on_message(event):
-                            platform.window.console.log(f"[DEBUG] Received message: {event.data}")
-                            ws_wrapper.messages.append(event.data)
-
-                        self.ws.onopen = on_open
-                        self.ws.onerror = on_error
-                        self.ws.onmessage = on_message
-
-                        platform.window.console.log(f"[DEBUG] Handlers set: onopen={self.ws.onopen}, onmessage={self.ws.onmessage}")
+                        platform.window.console.log("[DEBUG] JavaScript handlers set")
                         self.message_handlers_set = True
 
                     async def connect(self):
@@ -306,9 +311,12 @@ class Game:
                         return self
 
                     async def recv(self):
-                        while not self.messages:
+                        import platform
+                        # Read from the global JavaScript message queue
+                        while platform.window.tetrisMessages.length == 0:
                             await asyncio.sleep(0.01)
-                        return self.messages.pop(0)
+                        # Shift removes and returns first element
+                        return platform.window.tetrisMessages.shift()
 
                     async def send(self, data):
                         self.ws.send(data)
