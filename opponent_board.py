@@ -35,8 +35,7 @@ class OpponentBoard:
         self.opponent_level = 1
         self.opponent_lines = 0
 
-        # Initialize with test pieces
-        self.setup_test_pieces()
+        # Don't initialize test pieces for multiplayer - will be populated from network
     
     def setup_test_pieces(self):
         """Add some test pieces to the grid for display testing"""

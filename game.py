@@ -121,15 +121,26 @@ class Game:
                 platform.window.console.log("[DEBUG] Calling connect_websocket()")
             await self.connect_websocket()
 
-            # Wait for game to start
+            # Wait for game to start - process events while waiting
             while self.mode == "multiplayer" and not self.game_started:
+                # Process pygame events (important for Pygbag)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.running = False
+                        return
+                    elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        self.running = False
+                        return
+
                 # Show "waiting for opponent" message
                 self.screen.fill((0, 0, 0))
                 waiting_text = self.font.render("Waiting for opponent...", True, (255, 255, 255))
                 text_rect = waiting_text.get_rect(center=(400, 300))
                 self.screen.blit(waiting_text, text_rect)
                 pygame.display.flip()
-                await asyncio.sleep(0.1)
+
+                # Important: yield to asyncio event loop
+                await asyncio.sleep(0.01)
 
         while self.running:
             self.handle_input()
