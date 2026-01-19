@@ -166,7 +166,7 @@ class Game:
             server_urls = [
                 "ws://localhost:8765",  # For local play
                 "ws://75.172.7.65:8765", # Direct IP (only works with non-HTTPS clients)
-                "https://nonvendible-meroblastic-heaven.ngrok-free.dev",
+                "wss://nonvendible-meroblastic-heaven.ngrok-free.dev",
                 # "wss://YOUR-NGROK-URL.ngrok.io"  # Uncomment and update with your ngrok URL for GitHub Pages
             ]
 
