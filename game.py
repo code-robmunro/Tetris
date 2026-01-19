@@ -237,6 +237,29 @@ class Game:
                         self.url = url
                         self.ws = None
                         self.messages = []
+                        self.message_handlers_set = False
+
+                    def setup_handlers(self):
+                        """Set up WebSocket event handlers - needs to persist after connect()"""
+                        import platform
+
+                        # Capture self in closures
+                        messages_list = self.messages
+
+                        def on_open(event):
+                            platform.window.console.log("[DEBUG] WebSocket opened!")
+
+                        def on_error(event):
+                            platform.window.console.log(f"[DEBUG] WebSocket error: {event}")
+
+                        def on_message(event):
+                            platform.window.console.log(f"[DEBUG] Received message: {event.data}")
+                            messages_list.append(event.data)
+
+                        self.ws.onopen = on_open
+                        self.ws.onerror = on_error
+                        self.ws.onmessage = on_message
+                        self.message_handlers_set = True
 
                     async def connect(self):
                         # Use platform.window.WebSocket for browser
@@ -261,20 +284,8 @@ class Game:
 
                         platform.window.console.log(f"[DEBUG] WebSocket created, readyState: {self.ws.readyState}")
 
-                        # Set up event handlers before waiting
-                        def on_open(event):
-                            platform.window.console.log("[DEBUG] WebSocket opened!")
-
-                        def on_error(event):
-                            platform.window.console.log(f"[DEBUG] WebSocket error: {event}")
-
-                        def on_message(event):
-                            platform.window.console.log(f"[DEBUG] Received message: {event.data}")
-                            self.messages.append(event.data)
-
-                        self.ws.onopen = on_open
-                        self.ws.onerror = on_error
-                        self.ws.onmessage = on_message
+                        # Set up event handlers
+                        self.setup_handlers()
 
                         # Wait for connection to open
                         max_wait = 50  # 5 seconds
