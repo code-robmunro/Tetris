@@ -140,20 +140,33 @@ class Game:
                             self.websocket.recv(),
                             timeout=0.01
                         )
+
+                        # Debug: log what we received
+                        import sys
+                        if sys.platform == "emscripten":
+                            import platform
+                            platform.window.console.log(f"[DEBUG] Waiting loop received: {message}")
+
                         data = json.loads(message)
+
+                        if sys.platform == "emscripten":
+                            platform.window.console.log(f"[DEBUG] Message type: {data.get('type')}")
+
                         if data.get("type") == "game_start":
                             self.game_seed = data.get("seed")
                             self.player_role = data.get("role")
                             self.piece_randomizer.set_seed(self.game_seed)
                             self.game_started = True
 
-                            # Debug log
-                            import sys
                             if sys.platform == "emscripten":
-                                import platform
                                 platform.window.console.log(f"[DEBUG] Game starting in waiting loop! Role: {self.player_role}")
                     except asyncio.TimeoutError:
                         pass  # No message yet
+                    except Exception as e:
+                        import sys
+                        if sys.platform == "emscripten":
+                            import platform
+                            platform.window.console.log(f"[DEBUG] Error in waiting loop: {e}")
 
                 # Show "waiting for opponent" message
                 self.screen.fill((0, 0, 0))
