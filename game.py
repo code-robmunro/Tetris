@@ -196,8 +196,13 @@ class Game:
                         import platform
                         platform.window.console.log("[DEBUG] Creating WebSocket object")
 
-                        # Create WebSocket (correct syntax for browser)
-                        self.ws = platform.window.WebSocket.new(self.url)
+                        try:
+                            # Create WebSocket - direct constructor call
+                            self.ws = platform.window.WebSocket(self.url)
+                            platform.window.console.log("[DEBUG] WebSocket constructor succeeded")
+                        except Exception as e:
+                            platform.window.console.log(f"[DEBUG] WebSocket constructor failed: {e}")
+                            raise
 
                         platform.window.console.log(f"[DEBUG] WebSocket created, readyState: {self.ws.readyState}")
 
