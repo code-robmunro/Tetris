@@ -25,79 +25,112 @@ class UI:
         self.next_pieces = []
         self.held_piece = None
 
-        self.paint_layout()
+        # Cache static background layout (only rendered once)
+        self.static_layout = None
+        self.paint_static_layout()
+
+        # Track dirty flags for dynamic elements
+        self.level_dirty = True
+        self.lines_dirty = True
+        self.score_dirty = True
 
     def update(self):
         self.next_pieces = self.randomizer.next_pieces()
 
     def draw(self, screen):
-        screen.blit(self.ui, (0, 0))
-        self.paint_layout()
+        # Start with cached static layout
+        self.ui.blit(self.static_layout, (0, 0))
+
+        # Update only dynamic parts
+        self.update_dynamic_text()
         self.draw_next_pieces()
         self.draw_held_piece()
 
-    def paint_layout(self):
+        screen.blit(self.ui, (0, 0))
+
+    def paint_static_layout(self):
+        """Render static UI elements once and cache them"""
+        self.static_layout = pygame.Surface((globals.SCREEN_WIDTH, globals.SCREEN_HEIGHT))
+
         background = assets.load_image(globals.BACKGROUND)
-        self.ui.blit(background, (0, 0))
+        self.static_layout.blit(background, (0, 0))
 
         play_area_border = assets.load_image(globals.PLAY_AREA_BORDER)
-        self.ui.blit(play_area_border, globals.PLAY_AREA_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.PLAY_AREA_BOX_RECT)
+        self.static_layout.blit(play_area_border, globals.PLAY_AREA_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.PLAY_AREA_BOX_RECT)
 
         level_txt_border = assets.load_image(globals.LEVEL_TXT_BORDER)
-        self.ui.blit(level_txt_border, globals.LEVEL_TXT_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.LEVEL_TXT_BOX_RECT)
-        level_txt = self.font_20.render((globals.LEVEL_TXT + str(self.current_level)), True, (255, 255, 255))
-        self.ui.blit(level_txt, (365, 25))
+        self.static_layout.blit(level_txt_border, globals.LEVEL_TXT_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.LEVEL_TXT_BOX_RECT)
 
         # Paint secondary first, so it is underneath primary
         next_piece_secondary_border = assets.load_image(globals.NEXT_PIECE_SECONDARY_BORDER)
-        self.ui.blit(next_piece_secondary_border, globals.NEXT_PIECE_SECONDARY_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.NEXT_PIECE_SECONDARY_BOX_RECT)
+        self.static_layout.blit(next_piece_secondary_border, globals.NEXT_PIECE_SECONDARY_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.NEXT_PIECE_SECONDARY_BOX_RECT)
 
         next_piece_border = assets.load_image(globals.NEXT_PIECE_BORDER)
-        self.ui.blit(next_piece_border, globals.NEXT_PIECE_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.NEXT_PIECE_BOX_RECT)
+        self.static_layout.blit(next_piece_border, globals.NEXT_PIECE_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.NEXT_PIECE_BOX_RECT)
 
         next_txt_border = assets.load_image(globals.NEXT_TXT_BORDER)
-        self.ui.blit(next_txt_border, globals.NEXT_TXT_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.NEXT_TXT_BOX_RECT)
+        self.static_layout.blit(next_txt_border, globals.NEXT_TXT_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.NEXT_TXT_BOX_RECT)
         next_txt = self.font_16.render(globals.NEXT_TXT, True, (255, 255, 255))
-        self.ui.blit(next_txt, (567, 64))
+        self.static_layout.blit(next_txt, (567, 64))
 
         held_piece_border = assets.load_image(globals.HELD_PIECE_BORDER)
-        self.ui.blit(held_piece_border, globals.HELD_PIECE_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.HELD_PIECE_BOX_RECT)
+        self.static_layout.blit(held_piece_border, globals.HELD_PIECE_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.HELD_PIECE_BOX_RECT)
 
         held_txt_border = assets.load_image(globals.HELD_TXT_BORDER)
-        self.ui.blit(held_txt_border, globals.HELD_TXT_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.HELD_TXT_BOX_RECT)
+        self.static_layout.blit(held_txt_border, globals.HELD_TXT_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.HELD_TXT_BOX_RECT)
         held_txt = self.font_16.render(globals.HELD_TXT, True, (255, 255, 255))
-        self.ui.blit(held_txt, (672, 64))
+        self.static_layout.blit(held_txt, (672, 64))
 
         cpu_play_area_border = assets.load_image(globals.CPU_PLAY_AREA_BORDER)
-        self.ui.blit(cpu_play_area_border, globals.CPU_PLAY_AREA_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.CPU_PLAY_AREA_BOX_RECT)
+        self.static_layout.blit(cpu_play_area_border, globals.CPU_PLAY_AREA_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.CPU_PLAY_AREA_BOX_RECT)
 
         cpu_avatar_border = assets.load_image(globals.CPU_AVATAR_BORDER)
-        self.ui.blit(cpu_avatar_border, globals.CPU_AVATAR_BORDER_RECT.topleft)
+        self.static_layout.blit(cpu_avatar_border, globals.CPU_AVATAR_BORDER_RECT.topleft)
 
         cpu_avatar_box = assets.load_image(globals.CPU_AVATAR_BOX)
-        self.ui.blit(cpu_avatar_box, globals.CPU_AVATAR_BOX_RECT.topleft)
+        self.static_layout.blit(cpu_avatar_box, globals.CPU_AVATAR_BOX_RECT.topleft)
 
         cpu_avatar = assets.load_image(globals.CPU_AVATAR_CAT)
-        self.ui.blit(cpu_avatar, globals.CPU_AVATAR_CAT_RECT.topleft)
+        self.static_layout.blit(cpu_avatar, globals.CPU_AVATAR_CAT_RECT.topleft)
 
         score_border = assets.load_image(globals.SCORE_BORDER)
-        self.ui.blit(score_border, globals.SCORE_BORDER_RECT.topleft)
-        self.ui.fill((0, 0, 0), globals.SCORE_BOX_RECT)
+        self.static_layout.blit(score_border, globals.SCORE_BORDER_RECT.topleft)
+        self.static_layout.fill((0, 0, 0), globals.SCORE_BOX_RECT)
 
-        lines_txt = self.font_20.render((globals.LINES_TXT + str(self.current_lines)), True, (255, 255, 255))
-        self.ui.blit(lines_txt, (560, 436))
+    def update_dynamic_text(self):
+        """Update only the text that changes (level, lines, score)"""
+        # Clear and redraw level text
+        if self.level_dirty:
+            self.ui.fill((0, 0, 0), globals.LEVEL_TXT_BOX_RECT)
+            level_txt = self.font_20.render((globals.LEVEL_TXT + str(self.current_level)), True, (255, 255, 255))
+            self.ui.blit(level_txt, (365, 25))
+            self.level_dirty = False
 
-        score_txt = self.font_20.render((globals.SCORE_TXT + str(self.current_score)), True, (255, 255, 255))
-        self.ui.blit(score_txt, (560, 471))
+        # Clear and redraw lines text
+        if self.lines_dirty:
+            # Clear the score box area where lines are drawn
+            self.ui.fill((0, 0, 0), pygame.Rect(560, 436, 200, 30))
+            lines_txt = self.font_20.render((globals.LINES_TXT + str(self.current_lines)), True, (255, 255, 255))
+            self.ui.blit(lines_txt, (560, 436))
+            self.lines_dirty = False
 
+        # Clear and redraw score text
+        if self.score_dirty:
+            self.ui.fill((0, 0, 0), pygame.Rect(560, 471, 200, 30))
+            score_txt = self.font_20.render((globals.SCORE_TXT + str(self.current_score)), True, (255, 255, 255))
+            self.ui.blit(score_txt, (560, 471))
+            self.score_dirty = False
+
+        # Top score (rarely changes but always render for now)
+        self.ui.fill((0, 0, 0), pygame.Rect(560, 507, 200, 30))
         top_score_txt = self.font_20.render((globals.TOP_SCORE_TXT + str(self.top_score)), True, (255, 255, 255))
         self.ui.blit(top_score_txt, (560, 507))
 
@@ -138,12 +171,15 @@ class UI:
 
     def handle_level_change(self, level):
         self.current_level = level
+        self.level_dirty = True
 
     def handle_lines_change(self, lines):
         self.current_lines = lines
+        self.lines_dirty = True
 
     def handle_score_change(self, score):
         self.current_score = score
+        self.score_dirty = True
 
     def handle_piece_held_or_swapped(self, piece: Piece):
         self.held_piece = piece

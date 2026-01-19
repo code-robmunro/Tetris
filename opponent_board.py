@@ -12,21 +12,21 @@ class OpponentBoard:
         self.width = 10
         self.height = 20
         self.play_area_rect = globals.CPU_PLAY_AREA_BOX_RECT
-        
+
         # Load 16x16 sprite sheet
         self.piece_bits = assets.load_piece_sprites(
-            globals.TETRIS_BIT_16_SHEET, 
+            globals.TETRIS_BIT_16_SHEET,
             sprite_size=self.block_size
         )
-        
+
         # Create surface for opponent play area (160x320 pixels)
         self.play_area = pygame.Surface(
             (self.width * self.block_size, self.height * self.block_size)
         )
-        
+
         # Grid state (will be updated from websocket data)
         self.grid = [[0 for _ in range(self.height)] for _ in range(self.width)]
-        
+
         # Current piece state (from websocket)
         self.current_piece_data = None  # {x, y, shape, piece_type}
 
@@ -34,6 +34,17 @@ class OpponentBoard:
         self.opponent_score = 0
         self.opponent_level = 1
         self.opponent_lines = 0
+
+        # Cache font for stats rendering
+        self.stats_font = pygame.font.Font(None, 20)
+
+        # Cache rendered text surfaces (update only when values change)
+        self.cached_score_text = None
+        self.cached_level_text = None
+        self.cached_lines_text = None
+        self.last_score = -1
+        self.last_level = -1
+        self.last_lines = -1
 
         # Don't initialize test pieces for multiplayer - will be populated from network
     
@@ -111,16 +122,29 @@ class OpponentBoard:
         # Blit to screen at opponent position
         screen.blit(self.play_area, self.play_area_rect.topleft)
 
-        # Draw opponent stats (below board)
-        font = pygame.font.Font(None, 20)
-        score_text = font.render(f"Score: {self.opponent_score}", True, (255, 255, 255))
-        level_text = font.render(f"Level: {self.opponent_level}", True, (255, 255, 255))
-        lines_text = font.render(f"Lines: {self.opponent_lines}", True, (255, 255, 255))
-
+        # Draw opponent stats (below board) - only re-render if changed
         stats_y = self.play_area_rect.bottom + 10
-        screen.blit(score_text, (self.play_area_rect.left, stats_y))
-        screen.blit(level_text, (self.play_area_rect.left, stats_y + 25))
-        screen.blit(lines_text, (self.play_area_rect.left, stats_y + 50))
+
+        # Update cached text only if values changed
+        if self.opponent_score != self.last_score:
+            self.cached_score_text = self.stats_font.render(f"Score: {self.opponent_score}", True, (255, 255, 255))
+            self.last_score = self.opponent_score
+
+        if self.opponent_level != self.last_level:
+            self.cached_level_text = self.stats_font.render(f"Level: {self.opponent_level}", True, (255, 255, 255))
+            self.last_level = self.opponent_level
+
+        if self.opponent_lines != self.last_lines:
+            self.cached_lines_text = self.stats_font.render(f"Lines: {self.opponent_lines}", True, (255, 255, 255))
+            self.last_lines = self.opponent_lines
+
+        # Blit cached text surfaces
+        if self.cached_score_text:
+            screen.blit(self.cached_score_text, (self.play_area_rect.left, stats_y))
+        if self.cached_level_text:
+            screen.blit(self.cached_level_text, (self.play_area_rect.left, stats_y + 25))
+        if self.cached_lines_text:
+            screen.blit(self.cached_lines_text, (self.play_area_rect.left, stats_y + 50))
     
     def draw_bit(self, val, grid_x, grid_y):
         """Draw a single block"""

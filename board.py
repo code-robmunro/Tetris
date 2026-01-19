@@ -31,6 +31,12 @@ class Board:
         self.current_piece = None
         self.held_piece = None
 
+        # Cache ghost piece position
+        self.cached_ghost_offset = 0
+        self.last_piece_x = None
+        self.last_piece_y = None
+        self.last_piece_rotation = None
+
         # Rotation spin bug
         # self.setup_t_or_z_spin()
 
@@ -72,9 +78,9 @@ class Board:
                     else:
                         self.draw_bit(val, x, y)
 
-        # Draw ghost piece
+        # Draw ghost piece (with caching)
         if self.current_piece:
-            ghost_offset = self.find_lowest_valid_move()
+            ghost_offset = self.get_cached_ghost_offset()
             self.current_piece.draw(self.play_area, y_offset=ghost_offset, ghost=True)
             self.current_piece.draw(self.play_area)
 
@@ -164,6 +170,27 @@ class Board:
             y += 1
         offset = y - 1
         return offset
+
+    def get_cached_ghost_offset(self):
+        """Get ghost piece offset, only recalculating if piece has moved"""
+        if not self.current_piece:
+            return 0
+
+        # Check if piece position or rotation has changed
+        piece_changed = (
+            self.current_piece.x != self.last_piece_x or
+            self.current_piece.y != self.last_piece_y or
+            self.current_piece.rotation_state != self.last_piece_rotation
+        )
+
+        if piece_changed:
+            # Recalculate ghost position
+            self.cached_ghost_offset = self.find_lowest_valid_move()
+            self.last_piece_x = self.current_piece.x
+            self.last_piece_y = self.current_piece.y
+            self.last_piece_rotation = self.current_piece.rotation_state
+
+        return self.cached_ghost_offset
 
     # -----------------------------
     # Locking / Clearing

@@ -53,6 +53,11 @@ class Game:
         self.waiting_for_opponent = False
         self.game_over_notified = False
 
+        # Network optimization - track state changes
+        self.last_sent_state = None
+        self.frames_since_last_send = 0
+        self.send_interval = 2  # Send every 2 frames (30 updates/sec instead of 60)
+
         if self.mode == "ai":
             # Create AI opponent
             from opponent_board import OpponentBoard
@@ -348,16 +353,28 @@ class Game:
             print("Continuing in multiplayer mode without network connection")
 
     async def sync_network(self):
-        """Send local state and receive opponent state"""
+        """Send local state and receive opponent state (optimized)"""
         if not self.websocket or not self.game_started:
             return
 
         try:
-            # Send local state
-            local_state = self.serialize_board_state()
-            await self.websocket.send(json.dumps(local_state))
+            # Only send updates periodically, not every frame
+            self.frames_since_last_send += 1
+            should_send = False
 
-            # Receive opponent updates (non-blocking with short timeout)
+            if self.frames_since_last_send >= self.send_interval:
+                current_state = self.serialize_board_state()
+
+                # Check if state actually changed
+                if self.last_sent_state is None or self.state_changed(current_state, self.last_sent_state):
+                    should_send = True
+                    self.last_sent_state = current_state
+                    self.frames_since_last_send = 0
+
+            if should_send:
+                await self.websocket.send(json.dumps(current_state))
+
+            # Always check for incoming messages (non-blocking)
             try:
                 message = await asyncio.wait_for(
                     self.websocket.recv(),
@@ -370,6 +387,24 @@ class Game:
 
         except Exception as e:
             print(f"Network error: {e}")
+
+    def state_changed(self, current, last):
+        """Check if game state has meaningfully changed"""
+        # Always send if piece moved or rotated
+        if current['current_piece'] != last['current_piece']:
+            return True
+
+        # Always send if score/level/lines changed
+        if (current['score'] != last['score'] or
+            current['level'] != last['level'] or
+            current['lines'] != last['lines']):
+            return True
+
+        # Grid changes (piece locked)
+        if current['grid'] != last['grid']:
+            return True
+
+        return False
 
     async def handle_network_message(self, data):
         """Handle different message types from server"""
