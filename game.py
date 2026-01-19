@@ -162,12 +162,11 @@ class Game:
         try:
             import websockets
 
-            # Try localhost first (for local play), then fallback to external/ngrok
+            # Try localhost first (for local play), then fallback to tunnel
             server_urls = [
                 "ws://localhost:8765",  # For local play
                 "ws://75.172.7.65:8765", # Direct IP (only works with non-HTTPS clients)
-                "wss://nonvendible-meroblastic-heaven.ngrok-free.dev",
-                # "wss://YOUR-NGROK-URL.ngrok.io"  # Uncomment and update with your ngrok URL for GitHub Pages
+                "wss://snake-customize-contributing-allowed.trycloudflare.com"
             ]
 
             connected = False
