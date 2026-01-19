@@ -9,7 +9,14 @@ class PieceRandomizer:
         self.random = random.Random(seed)
         self.bag = []
         self._refill_bag()
-    
+
+    def set_seed(self, seed):
+        """Initialize randomizer with specific seed for multiplayer sync"""
+        self.random = random.Random(seed)
+        # Clear and refill bag with seeded randomness
+        self.bag.clear()
+        self._refill_bag()
+
     def _refill_bag(self):
         new_pieces = list(PieceType)
         self.random.shuffle(new_pieces)

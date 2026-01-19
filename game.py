@@ -46,6 +46,13 @@ class Game:
         self.ai_opponent = None
         self.websocket = None
 
+        # Multiplayer state
+        self.game_seed = None
+        self.player_role = None  # "player1" or "player2"
+        self.game_started = False
+        self.waiting_for_opponent = False
+        self.game_over_notified = False
+
         if self.mode == "ai":
             # Create AI opponent
             from opponent_board import OpponentBoard
@@ -105,6 +112,16 @@ class Game:
         if self.mode == "multiplayer":
             await self.connect_websocket()
 
+            # Wait for game to start
+            while self.mode == "multiplayer" and not self.game_started:
+                # Show "waiting for opponent" message
+                self.screen.fill((0, 0, 0))
+                waiting_text = self.font.render("Waiting for opponent...", True, (255, 255, 255))
+                text_rect = waiting_text.get_rect(center=(400, 300))
+                self.screen.blit(waiting_text, text_rect)
+                pygame.display.flip()
+                await asyncio.sleep(0.1)
+
         while self.running:
             self.handle_input()
 
@@ -126,9 +143,11 @@ class Game:
                 show_fps_text = self.font.render(f"FPS: {self.fps_display}", True, (255, 255, 0))
                 self.screen.blit(show_fps_text, (100, 100))
 
-            # Send/receive websocket data
-            if self.mode == "multiplayer" and not self.paused:
-                await self.sync_network()
+            # Send/receive websocket data and handle game over notification
+            if self.mode == "multiplayer":
+                await self.notify_game_over()
+                if not self.paused:
+                    await self.sync_network()
 
             pygame.display.flip()
             self.clock.tick(60)
@@ -139,11 +158,32 @@ class Game:
             await self.websocket.close()
 
     async def connect_websocket(self):
-        """Establish websocket connection"""
+        """Establish websocket connection and wait for game start"""
         try:
             import websockets
             self.websocket = await websockets.connect("ws://localhost:8765")
             print("Connected to game server")
+
+            # Wait for game_start message from server
+            message = await self.websocket.recv()
+            data = json.loads(message)
+
+            if data.get("type") == "waiting":
+                print("Waiting for opponent to connect...")
+                self.waiting_for_opponent = True
+                # Wait for game_start
+                message = await self.websocket.recv()
+                data = json.loads(message)
+
+            if data.get("type") == "game_start":
+                self.game_seed = data.get("seed")
+                self.player_role = data.get("role")
+                print(f"Game starting! You are {self.player_role}")
+                print(f"Game seed: {self.game_seed}")
+
+                # Initialize piece randomizer with server seed
+                self.piece_randomizer.set_seed(self.game_seed)
+                self.game_started = True
         except ImportError:
             print("websockets library not installed. Run: pip install websockets")
             print("Continuing in multiplayer mode without network connection")
@@ -153,34 +193,73 @@ class Game:
 
     async def sync_network(self):
         """Send local state and receive opponent state"""
-        if not self.websocket:
+        if not self.websocket or not self.game_started:
             return
 
         try:
-            # Send local player state
+            # Send local state
             local_state = self.serialize_board_state()
             await self.websocket.send(json.dumps(local_state))
 
-            # Receive opponent state (non-blocking)
+            # Receive opponent updates (non-blocking with short timeout)
             try:
                 message = await asyncio.wait_for(
                     self.websocket.recv(),
                     timeout=0.001
                 )
-                opponent_data = json.loads(message)
-                if self.opponent_board:
-                    self.opponent_board.update_from_network(opponent_data)
+                data = json.loads(message)
+                await self.handle_network_message(data)
             except asyncio.TimeoutError:
-                pass  # No data available this frame
+                pass  # No data this frame
 
         except Exception as e:
             print(f"Network error: {e}")
 
+    async def handle_network_message(self, data):
+        """Handle different message types from server"""
+        msg_type = data.get("type")
+
+        if msg_type == "opponent_state":
+            # Update opponent board display
+            if self.opponent_board:
+                self.opponent_board.update_from_network(data)
+
+        elif msg_type == "opponent_disconnected":
+            print("Opponent disconnected! You win!")
+            self.state = "WIN"
+
+        elif msg_type == "opponent_game_over":
+            print("Opponent lost! You win!")
+            self.state = "WIN"
+
+        elif msg_type == "game_result":
+            if data.get("winner") == "opponent":
+                print("You lost!")
+                self.state = "LOSE"
+
+    async def notify_game_over(self):
+        """Send game over notification (called from run loop)"""
+        if self.state == "GAME_OVER" and not self.game_over_notified:
+            if self.mode == "multiplayer" and self.websocket:
+                try:
+                    await self.websocket.send(json.dumps({
+                        "type": "game_over",
+                        "timestamp": pygame.time.get_ticks()
+                    }))
+                    self.game_over_notified = True
+                except Exception as e:
+                    print(f"Failed to send game over: {e}")
+
     def serialize_board_state(self):
         """Convert local board to data for sending"""
         data = {
+            'type': 'game_state',
             'grid': self.board.grid,
-            'current_piece': None
+            'current_piece': None,
+            'score': self.score,
+            'level': self.level,
+            'lines': self.lines_cleared,
+            'timestamp': pygame.time.get_ticks()
         }
 
         if self.board.current_piece:
@@ -293,10 +372,35 @@ class Game:
         if self.mode in ["ai", "multiplayer"] and self.opponent_board:
             self.opponent_board.draw(self.screen)
 
+        # Draw win/loss overlay
+        if self.state == "WIN":
+            overlay = pygame.Surface((800, 600))
+            overlay.set_alpha(128)
+            overlay.fill((0, 100, 0))
+            self.screen.blit(overlay, (0, 0))
+
+            win_text = self.font.render("YOU WIN!", True, (255, 255, 0))
+            text_rect = win_text.get_rect(center=(400, 300))
+            self.screen.blit(win_text, text_rect)
+
+        elif self.state == "LOSE":
+            overlay = pygame.Surface((800, 600))
+            overlay.set_alpha(128)
+            overlay.fill((100, 0, 0))
+            self.screen.blit(overlay, (0, 0))
+
+            lose_text = self.font.render("YOU LOSE", True, (255, 0, 0))
+            text_rect = lose_text.get_rect(center=(400, 300))
+            self.screen.blit(lose_text, text_rect)
+
     def spawn_piece(self):
         piece = Piece(randomizer=self.piece_randomizer)
         if not self.board.place_piece(piece):
+            print(f"[DEBUG] GAME OVER: Failed to place piece type {piece.piece_type} at ({piece.x}, {piece.y})")
+            print(f"[DEBUG] Current state: lines={self.lines_cleared}, level={self.level}, score={self.score}")
             self.state = "GAME_OVER"
+            # Set flag to notify in async context
+            self.game_over_notified = False
             return
 
     def handle_piece_lock(self, lock_info):
@@ -309,6 +413,8 @@ class Game:
 
         if lock_info["board_full"]:
             self.state = "GAME_OVER"
+            # Set flag to notify in async context
+            self.game_over_notified = False
         else:
             self.spawn_piece()
 

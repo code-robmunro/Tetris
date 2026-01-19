@@ -29,7 +29,12 @@ class OpponentBoard:
         
         # Current piece state (from websocket)
         self.current_piece_data = None  # {x, y, shape, piece_type}
-        
+
+        # Opponent stats
+        self.opponent_score = 0
+        self.opponent_level = 1
+        self.opponent_lines = 0
+
         # Initialize with test pieces
         self.setup_test_pieces()
     
@@ -79,28 +84,44 @@ class OpponentBoard:
         """Update board state from received websocket data"""
         if 'grid' in data:
             self.grid = data['grid']
-        
+
         if 'current_piece' in data:
             self.current_piece_data = data['current_piece']
         else:
             self.current_piece_data = None
+
+        # Store opponent stats for display
+        self.opponent_score = data.get('score', 0)
+        self.opponent_level = data.get('level', 1)
+        self.opponent_lines = data.get('lines', 0)
     
     def draw(self, screen):
-        """Draw the opponent's board"""
+        """Draw the opponent's board and stats"""
         self.play_area.fill((0, 0, 0))
-        
+
         # Draw locked blocks from grid
         for x, col in enumerate(self.grid):
             for y, val in enumerate(col):
                 if val:
                     self.draw_bit(val, x, y)
-        
+
         # Draw current piece if data exists
         if self.current_piece_data:
             self.draw_piece(self.current_piece_data)
-        
+
         # Blit to screen at opponent position
         screen.blit(self.play_area, self.play_area_rect.topleft)
+
+        # Draw opponent stats (below board)
+        font = pygame.font.Font(None, 20)
+        score_text = font.render(f"Score: {self.opponent_score}", True, (255, 255, 255))
+        level_text = font.render(f"Level: {self.opponent_level}", True, (255, 255, 255))
+        lines_text = font.render(f"Lines: {self.opponent_lines}", True, (255, 255, 255))
+
+        stats_y = self.play_area_rect.bottom + 10
+        screen.blit(score_text, (self.play_area_rect.left, stats_y))
+        screen.blit(level_text, (self.play_area_rect.left, stats_y + 25))
+        screen.blit(lines_text, (self.play_area_rect.left, stats_y + 50))
     
     def draw_bit(self, val, grid_x, grid_y):
         """Draw a single block"""
