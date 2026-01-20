@@ -35,6 +35,7 @@ class Game:
         if self.is_browser:
             self.target_fps = 60  # Start at 60, will adapt
             self.actual_fps_samples = []
+            self.perf_log_timer = 0  # Separate timer for performance logging
         else:
             self.target_fps = 60
 
@@ -558,10 +559,12 @@ class Game:
                 self.actual_fps_samples.pop(0)
 
             # Log FPS to browser console every 5 seconds
-            if len(self.actual_fps_samples) >= 60 and self.fps_timer >= 5:
+            self.perf_log_timer += self.delta_time
+            if len(self.actual_fps_samples) >= 60 and self.perf_log_timer >= 5:
                 avg_fps = sum(self.actual_fps_samples) / len(self.actual_fps_samples)
                 import platform
                 platform.window.console.log(f"[Perf] Avg FPS: {avg_fps:.1f}, Target: {self.target_fps}")
+                self.perf_log_timer = 0  # Reset the performance log timer
 
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER

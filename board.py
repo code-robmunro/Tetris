@@ -19,7 +19,7 @@ class Board:
         self.recently_used_hold = False
         self.line_clear_animation = None  # Stores animation state
         self.animation_timer = 0
-        self.animation_duration = 0.4  # 400ms animation
+        self.animation_duration = 0.2  # 200ms animation
 
         # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
@@ -119,7 +119,7 @@ class Board:
 
         elif anim['phase'] == 1:  # Fade phase
             # Fade out
-            progress = (anim['timer'] - 0.2) / 0.15  # 0.0 to 1.0
+            progress = (anim['timer'] - 0.1) / 0.075  # 0.0 to 1.0
             alpha = int(255 * (1 - progress))
             surf.set_alpha(alpha)
 
@@ -236,13 +236,13 @@ class Board:
         anim = self.line_clear_animation
         anim['timer'] += delta_time
 
-        # Phase 0: Flash effect (0-0.2s)
-        if anim['timer'] < 0.2:
+        # Phase 0: Flash effect (0-0.1s)
+        if anim['timer'] < 0.1:
             anim['phase'] = 0
-        # Phase 1: Fade out effect (0.2-0.35s)
-        elif anim['timer'] < 0.35:
+        # Phase 1: Fade out effect (0.1-0.175s)
+        elif anim['timer'] < 0.175:
             anim['phase'] = 1
-        # Phase 2: Remove lines (0.35-0.4s)
+        # Phase 2: Remove lines (0.175-0.2s)
         else:
             anim['phase'] = 2
             # Actually remove the lines (from bottom to top to preserve indices)
