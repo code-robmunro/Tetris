@@ -23,6 +23,7 @@ class Board:
 
         # x-major grid
         self.grid = [[0 for _ in range(globals.BOARD_HEIGHT)] for _ in range(globals.BOARD_WIDTH)]
+        self.grid_version = 0  # Increment when grid changes (for network optimization)
         self.piece_bits = assets.load_piece_sprites(globals.TETRIS_BIT_24_SHEET)
         self.play_area = pygame.Surface(
             (globals.BOARD_WIDTH * globals.TETRIS_BIT_24_WIDTH,
@@ -209,6 +210,7 @@ class Board:
                 self.grid[bx][by] = val
 
         self.current_piece = None
+        self.grid_version += 1  # Grid changed - increment version for network sync
         print(f"[DEBUG] lock_piece: Locked {locked_piece_type}, set current_piece to None")
         self.recently_used_hold = False
         return self.clear_lines()
@@ -252,6 +254,8 @@ class Board:
             # Actually remove the lines
             for row in anim['rows']:
                 self.remove_row(row)
+
+            self.grid_version += 1  # Grid changed - increment version for network sync
 
             # Return the clear info
             result = {"lines_cleared": len(anim['rows']), "board_full": False}

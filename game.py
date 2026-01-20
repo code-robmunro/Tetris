@@ -410,10 +410,12 @@ class Game:
                 await self.websocket.send(json.dumps(current_state))
 
             # Always check for incoming messages (non-blocking)
+            # Use shorter timeout in browser to avoid blocking the event loop
+            recv_timeout = 0.0001 if self.is_browser else 0.001  # 0.1ms in browser, 1ms on desktop
             try:
                 message = await asyncio.wait_for(
                     self.websocket.recv(),
-                    timeout=0.001
+                    timeout=recv_timeout
                 )
                 data = json.loads(message)
                 await self.handle_network_message(data)
@@ -436,8 +438,8 @@ class Game:
                 current['lines'] != last['lines']):
                 return True
 
-            # Grid changes (piece locked)
-            if current['grid'] != last['grid']:
+            # Grid changes (piece locked) - use version number instead of deep comparison
+            if current['grid_version'] != last['grid_version']:
                 return True
 
             return False
@@ -487,6 +489,7 @@ class Game:
         data = {
             'type': 'game_state',
             'grid': self.board.grid,
+            'grid_version': self.board.grid_version,  # Track grid changes efficiently
             'current_piece': None,
             'score': self.score,
             'level': self.level,
