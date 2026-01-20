@@ -124,6 +124,13 @@ class Game:
         self.soft_drop_timer = 0
         self.soft_drop_active = False
 
+        # DAS (Delayed Auto Shift) for left/right movement
+        self.left_held = False
+        self.right_held = False
+        self.left_das_timer = 0
+        self.right_das_timer = 0
+        self.das_repeat_rate = 0.033  # 33ms between repeated moves (30 moves/sec)
+
     async def run(self):
         # Debug: Log mode
         import sys
@@ -520,9 +527,15 @@ class Game:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 elif event.key == pygame.K_a or event.key == pygame.K_LEFT:
-                    self.move_left()
+                    if not self.left_held:  # Only trigger on initial press
+                        self.left_held = True
+                        self.left_das_timer = 0
+                        self.move_left()  # Immediate move on key press
                 elif event.key == pygame.K_d or event.key == pygame.K_RIGHT:
-                    self.move_right()
+                    if not self.right_held:  # Only trigger on initial press
+                        self.right_held = True
+                        self.right_das_timer = 0
+                        self.move_right()  # Immediate move on key press
                 elif event.key == pygame.K_s or event.key == pygame.K_DOWN:
                     self.soft_drop_active = True
                 elif event.key == pygame.K_SPACE:
@@ -545,7 +558,13 @@ class Game:
                 elif event.key == pygame.K_b:
                     breakpoint()
             elif event.type == pygame.KEYUP:
-                if event.key in (pygame.K_s, pygame.K_DOWN):
+                if event.key in (pygame.K_a, pygame.K_LEFT):
+                    self.left_held = False
+                    self.left_das_timer = 0
+                elif event.key in (pygame.K_d, pygame.K_RIGHT):
+                    self.right_held = False
+                    self.right_das_timer = 0
+                elif event.key in (pygame.K_s, pygame.K_DOWN):
                     self.soft_drop_active = False  # stop soft drop
 
     def update(self):
@@ -573,6 +592,25 @@ class Game:
             if len(self.actual_fps_samples) == 60:
                 import platform
                 platform.window.console.log(f"[DEBUG] Perf timer at: {self.perf_log_timer:.2f}s (need 5s to log)")
+
+        # Handle DAS (Delayed Auto Shift) for left/right movement
+        if self.left_held:
+            self.left_das_timer += self.delta_time
+            # Initial move happened on key press, now handle DAS delay and repeat
+            if self.left_das_timer >= self.DELAYED_AUTO_SHIFT:
+                # After DAS delay, move repeatedly at the repeat rate
+                while self.left_das_timer >= self.DELAYED_AUTO_SHIFT + self.das_repeat_rate:
+                    self.move_left()
+                    self.left_das_timer -= self.das_repeat_rate
+
+        if self.right_held:
+            self.right_das_timer += self.delta_time
+            # Initial move happened on key press, now handle DAS delay and repeat
+            if self.right_das_timer >= self.DELAYED_AUTO_SHIFT:
+                # After DAS delay, move repeatedly at the repeat rate
+                while self.right_das_timer >= self.DELAYED_AUTO_SHIFT + self.das_repeat_rate:
+                    self.move_right()
+                    self.right_das_timer -= self.das_repeat_rate
 
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
