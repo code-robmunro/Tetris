@@ -9,6 +9,7 @@ import assets
 
 class Board:
     MAX_LOCK_RESETS = 15
+    ANIMATION_FLASH_FREQUENCY = 30  # Flashes per second (frame-rate independent)
 
     def __init__(self, event_bus: EventBus, piece_randomizer):
         self.event_bus = event_bus
@@ -107,8 +108,9 @@ class Board:
         anim = self.line_clear_animation
 
         if anim['phase'] == 0:  # Flash phase
-            # Alternate between white flash and normal every 3 frames
-            flash_cycle = int(anim['timer'] * 60) % 6  # 60 fps
+            # Calculate flash based on actual time elapsed, not assumed FPS
+            # Flash every 1/30th of a second (30 flashes per second)
+            flash_cycle = int(anim['timer'] * self.ANIMATION_FLASH_FREQUENCY) % 6
             if flash_cycle < 3:
                 # Create white flash overlay
                 white_overlay = pygame.Surface((globals.TETRIS_BIT_24_WIDTH, globals.TETRIS_BIT_24_HEIGHT))

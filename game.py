@@ -22,14 +22,22 @@ class Game:
         self.clock = pygame.time.Clock()
         self.screen = screen
         self.running = True
-        self.delta_time = self.clock.get_time() / 1000
+        self.delta_time = 0.016  # Initialize to ~60 FPS (1/60 second)
         self.paused = False
         self.show_fps = False
         self.fps_display = 60
         self.fps_timer = 0
         self.font = pygame.font.SysFont(None, 36)
         self.event_bus = EventBus()
-        
+
+        # Detect browser environment and set appropriate frame rate
+        self.is_browser = sys.platform == "emscripten"
+        if self.is_browser:
+            self.target_fps = 60  # Start at 60, will adapt
+            self.actual_fps_samples = []
+        else:
+            self.target_fps = 60
+
         # Create player's piece randomizer
         self.piece_randomizer = PieceRandomizer()
         
@@ -221,8 +229,14 @@ class Game:
                     await self.sync_network()
 
             pygame.display.flip()
-            self.clock.tick(60)
-            await asyncio.sleep(0)  # keep async flow for pygbag/browser
+
+            # In browser, yield before tick to sync with requestAnimationFrame
+            if self.is_browser:
+                await asyncio.sleep(0)
+                self.clock.tick(self.target_fps)
+            else:
+                self.clock.tick(self.target_fps)
+                await asyncio.sleep(0)
 
         # Cleanup websocket connection
         if self.websocket:
@@ -531,8 +545,17 @@ class Game:
                     self.soft_drop_active = False  # stop soft drop
 
     def update(self):
-        self.delta_time = self.clock.tick(60) / 1000
+        self.delta_time = self.clock.tick(self.target_fps) / 1000
         self.fps_timer += self.delta_time
+
+        # Track actual FPS in browser to detect throttling
+        if self.is_browser and self.delta_time > 0:
+            actual_fps = 1 / self.delta_time
+            self.actual_fps_samples.append(actual_fps)
+
+            # Keep last 60 samples (1 second worth)
+            if len(self.actual_fps_samples) > 60:
+                self.actual_fps_samples.pop(0)
 
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
