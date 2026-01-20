@@ -557,6 +557,12 @@ class Game:
             if len(self.actual_fps_samples) > 60:
                 self.actual_fps_samples.pop(0)
 
+            # Log FPS to browser console every 5 seconds
+            if len(self.actual_fps_samples) >= 60 and self.fps_timer >= 5:
+                avg_fps = sum(self.actual_fps_samples) / len(self.actual_fps_samples)
+                import platform
+                platform.window.console.log(f"[Perf] Avg FPS: {avg_fps:.1f}, Target: {self.target_fps}")
+
         if self.soft_drop_active:
             self.gravity_time += self.delta_time * self.SOFT_DROP_MULTIPLIER
         else:
