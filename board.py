@@ -180,7 +180,7 @@ class Board:
         piece_changed = (
             self.current_piece.x != self.last_piece_x or
             self.current_piece.y != self.last_piece_y or
-            self.current_piece.rotation_state != self.last_piece_rotation
+            self.current_piece.rotation != self.last_piece_rotation
         )
 
         if piece_changed:
@@ -188,7 +188,7 @@ class Board:
             self.cached_ghost_offset = self.find_lowest_valid_move()
             self.last_piece_x = self.current_piece.x
             self.last_piece_y = self.current_piece.y
-            self.last_piece_rotation = self.current_piece.rotation_state
+            self.last_piece_rotation = self.current_piece.rotation
 
         return self.cached_ghost_offset
 

@@ -127,6 +127,10 @@ class Game:
             await self.connect_websocket()
 
             # Wait for game to start - process events while waiting
+            import sys
+            if sys.platform != "emscripten":
+                print(f"[DEBUG] Entering waiting loop, game_started={self.game_started}")
+
             while self.mode == "multiplayer" and not self.game_started:
                 # Process pygame events (important for Pygbag)
                 for event in pygame.event.get():
@@ -165,6 +169,8 @@ class Game:
 
                             if sys.platform == "emscripten":
                                 platform.window.console.log(f"[DEBUG] Game starting in waiting loop! Role: {self.player_role}")
+                            else:
+                                print(f"[DEBUG] Game starting in waiting loop! Role: {self.player_role}, Seed: {self.game_seed}")
                     except asyncio.TimeoutError:
                         pass  # No message yet
                     except Exception as e:
@@ -182,6 +188,10 @@ class Game:
 
                 # Important: yield to asyncio event loop
                 await asyncio.sleep(0.01)
+
+            import sys
+            if sys.platform != "emscripten":
+                print(f"[DEBUG] Exited waiting loop, game_started={self.game_started}")
 
         while self.running:
             self.handle_input()
@@ -390,21 +400,26 @@ class Game:
 
     def state_changed(self, current, last):
         """Check if game state has meaningfully changed"""
-        # Always send if piece moved or rotated
-        if current['current_piece'] != last['current_piece']:
-            return True
+        try:
+            # Always send if piece moved or rotated
+            if current['current_piece'] != last['current_piece']:
+                return True
 
-        # Always send if score/level/lines changed
-        if (current['score'] != last['score'] or
-            current['level'] != last['level'] or
-            current['lines'] != last['lines']):
-            return True
+            # Always send if score/level/lines changed
+            if (current['score'] != last['score'] or
+                current['level'] != last['level'] or
+                current['lines'] != last['lines']):
+                return True
 
-        # Grid changes (piece locked)
-        if current['grid'] != last['grid']:
-            return True
+            # Grid changes (piece locked)
+            if current['grid'] != last['grid']:
+                return True
 
-        return False
+            return False
+        except Exception as e:
+            # If comparison fails, assume state changed to be safe
+            print(f"[DEBUG] state_changed exception: {e}")
+            return True
 
     async def handle_network_message(self, data):
         """Handle different message types from server"""

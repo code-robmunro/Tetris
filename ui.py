@@ -29,10 +29,13 @@ class UI:
         self.static_layout = None
         self.paint_static_layout()
 
-        # Track dirty flags for dynamic elements
+        # Track dirty flags for dynamic elements and cache text surfaces
         self.level_dirty = True
         self.lines_dirty = True
         self.score_dirty = True
+        self.cached_level_text = None
+        self.cached_lines_text = None
+        self.cached_score_text = None
 
     def update(self):
         self.next_pieces = self.randomizer.next_pieces()
@@ -107,30 +110,30 @@ class UI:
 
     def update_dynamic_text(self):
         """Update only the text that changes (level, lines, score)"""
-        # Clear and redraw level text
+        # Re-render text surfaces only when values change
         if self.level_dirty:
-            self.ui.fill((0, 0, 0), globals.LEVEL_TXT_BOX_RECT)
-            level_txt = self.font_20.render((globals.LEVEL_TXT + str(self.current_level)), True, (255, 255, 255))
-            self.ui.blit(level_txt, (365, 25))
+            self.cached_level_text = self.font_20.render((globals.LEVEL_TXT + str(self.current_level)), True, (255, 255, 255))
             self.level_dirty = False
 
-        # Clear and redraw lines text
         if self.lines_dirty:
-            # Clear the score box area where lines are drawn
-            self.ui.fill((0, 0, 0), pygame.Rect(560, 436, 200, 30))
-            lines_txt = self.font_20.render((globals.LINES_TXT + str(self.current_lines)), True, (255, 255, 255))
-            self.ui.blit(lines_txt, (560, 436))
+            self.cached_lines_text = self.font_20.render((globals.LINES_TXT + str(self.current_lines)), True, (255, 255, 255))
             self.lines_dirty = False
 
-        # Clear and redraw score text
         if self.score_dirty:
-            self.ui.fill((0, 0, 0), pygame.Rect(560, 471, 200, 30))
-            score_txt = self.font_20.render((globals.SCORE_TXT + str(self.current_score)), True, (255, 255, 255))
-            self.ui.blit(score_txt, (560, 471))
+            self.cached_score_text = self.font_20.render((globals.SCORE_TXT + str(self.current_score)), True, (255, 255, 255))
             self.score_dirty = False
 
-        # Top score (rarely changes but always render for now)
-        self.ui.fill((0, 0, 0), pygame.Rect(560, 507, 200, 30))
+        # Always blit the cached text surfaces every frame
+        if hasattr(self, 'cached_level_text') and self.cached_level_text:
+            self.ui.blit(self.cached_level_text, (365, 25))
+
+        if hasattr(self, 'cached_lines_text') and self.cached_lines_text:
+            self.ui.blit(self.cached_lines_text, (560, 436))
+
+        if hasattr(self, 'cached_score_text') and self.cached_score_text:
+            self.ui.blit(self.cached_score_text, (560, 471))
+
+        # Top score (always render)
         top_score_txt = self.font_20.render((globals.TOP_SCORE_TXT + str(self.top_score)), True, (255, 255, 255))
         self.ui.blit(top_score_txt, (560, 507))
 
