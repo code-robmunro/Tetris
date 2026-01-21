@@ -407,7 +407,16 @@ class Game:
                     self.frames_since_last_send = 0
 
             if should_send:
-                await self.websocket.send(json.dumps(current_state))
+                message = json.dumps(current_state)
+
+                # Debug: Log bandwidth usage in browser
+                if self.is_browser:
+                    import platform
+                    has_grid = 'grid' in current_state
+                    msg_size = len(message)
+                    platform.window.console.log(f"[Network] Sending {msg_size} bytes (grid: {has_grid})")
+
+                await self.websocket.send(message)
 
             # Always check for incoming messages (non-blocking)
             # Use shorter timeout in browser to avoid blocking the event loop
@@ -484,18 +493,25 @@ class Game:
                 except Exception as e:
                     print(f"Failed to send game over: {e}")
 
-    def serialize_board_state(self):
-        """Convert local board to data for sending"""
+    def serialize_board_state(self, force_full_grid=False):
+        """Convert local board to data for sending (optimized with delta compression)"""
+        # Only send full grid when it actually changed (piece locked or lines cleared)
+        grid_changed = (self.last_sent_state is None or
+                       self.board.grid_version != self.last_sent_state.get('grid_version', -1))
+
         data = {
             'type': 'game_state',
-            'grid': self.board.grid,
-            'grid_version': self.board.grid_version,  # Track grid changes efficiently
+            'grid_version': self.board.grid_version,
             'current_piece': None,
             'score': self.score,
             'level': self.level,
             'lines': self.lines_cleared,
             'timestamp': pygame.time.get_ticks()
         }
+
+        # Only include full grid if it changed or forced
+        if grid_changed or force_full_grid:
+            data['grid'] = self.board.grid
 
         if self.board.current_piece:
             data['current_piece'] = {
