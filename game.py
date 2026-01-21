@@ -447,11 +447,12 @@ class Game:
             curr_piece = current.get('current_piece')
             last_piece = last.get('current_piece')
 
-            # Compare piece position (x, y) rather than full object
-            if curr_piece != last_piece:
-                # More granular comparison
-                if curr_piece is None or last_piece is None:
-                    return True  # Piece spawned or locked
+            # Check if piece spawned or locked
+            if (curr_piece is None) != (last_piece is None):
+                return True  # One is None, other isn't - piece spawned or locked
+
+            # If both pieces exist, compare positions
+            if curr_piece is not None and last_piece is not None:
                 if (curr_piece.get('x') != last_piece.get('x') or
                     curr_piece.get('y') != last_piece.get('y') or
                     curr_piece.get('piece_type') != last_piece.get('piece_type')):
