@@ -67,6 +67,7 @@ class Game:
 
         # Network optimization - track state changes
         self.last_sent_state = None
+        self.last_sent_grid_version = -1  # Track when we last sent the full grid
         self.frames_since_last_send = 0
         self.send_interval = 2  # Send every 2 frames (30 updates/sec instead of 60)
 
@@ -496,8 +497,9 @@ class Game:
     def serialize_board_state(self, force_full_grid=False):
         """Convert local board to data for sending (optimized with delta compression)"""
         # Only send full grid when it actually changed (piece locked or lines cleared)
-        grid_changed = (self.last_sent_state is None or
-                       self.board.grid_version != self.last_sent_state.get('grid_version', -1))
+        # OR if this is the first time sending (last_sent_grid_version == -1)
+        grid_changed = self.board.grid_version != self.last_sent_grid_version
+        is_first_send = self.last_sent_grid_version == -1
 
         data = {
             'type': 'game_state',
@@ -509,9 +511,10 @@ class Game:
             'timestamp': pygame.time.get_ticks()
         }
 
-        # Only include full grid if it changed or forced
-        if grid_changed or force_full_grid:
+        # Only include full grid if it changed, forced, or first send
+        if grid_changed or force_full_grid or is_first_send:
             data['grid'] = self.board.grid
+            self.last_sent_grid_version = self.board.grid_version  # Update tracking
 
         if self.board.current_piece:
             data['current_piece'] = {
