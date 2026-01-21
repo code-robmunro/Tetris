@@ -610,6 +610,12 @@ class Game:
 
     def update(self):
         self.delta_time = self.clock.tick(self.target_fps) / 1000
+
+        # Cap delta_time to prevent huge jumps after waiting/pausing
+        # Max out at 3 frames worth of time (0.05s at 60fps)
+        if self.delta_time > 0.05:
+            self.delta_time = 0.05
+
         self.fps_timer += self.delta_time
 
         # Track actual FPS in browser to detect throttling
