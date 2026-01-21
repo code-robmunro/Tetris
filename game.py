@@ -213,6 +213,9 @@ class Game:
             if sys.platform != "emscripten":
                 print(f"[DEBUG] Exited waiting loop, game_started={self.game_started}")
 
+            # Reset clock after waiting to prevent huge delta_time on first update
+            self.clock.tick()
+
         while self.running:
             self.handle_input()
 
