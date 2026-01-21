@@ -406,6 +406,11 @@ class Game:
                     should_send = True
                     self.last_sent_state = current_state
                     self.frames_since_last_send = 0
+                else:
+                    # Debug: Log when we skip sending due to no state change
+                    if self.is_browser:
+                        import platform
+                        platform.window.console.log(f"[Network] Skipping send - no state change")
 
             if should_send:
                 message = json.dumps(current_state)
@@ -439,8 +444,18 @@ class Game:
         """Check if game state has meaningfully changed"""
         try:
             # Always send if piece moved or rotated
-            if current['current_piece'] != last['current_piece']:
-                return True
+            curr_piece = current.get('current_piece')
+            last_piece = last.get('current_piece')
+
+            # Compare piece position (x, y) rather than full object
+            if curr_piece != last_piece:
+                # More granular comparison
+                if curr_piece is None or last_piece is None:
+                    return True  # Piece spawned or locked
+                if (curr_piece.get('x') != last_piece.get('x') or
+                    curr_piece.get('y') != last_piece.get('y') or
+                    curr_piece.get('piece_type') != last_piece.get('piece_type')):
+                    return True
 
             # Always send if score/level/lines changed
             if (current['score'] != last['score'] or

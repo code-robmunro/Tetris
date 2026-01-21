@@ -92,7 +92,8 @@ class OpponentBoard:
     
     def update_from_network(self, data):
         """Update board state from received websocket data"""
-        if 'grid' in data:
+        # Only update grid if it's present AND not null (delta compression)
+        if 'grid' in data and data['grid'] is not None:
             self.grid = data['grid']
 
         if 'current_piece' in data:
